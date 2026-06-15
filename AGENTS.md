@@ -18,7 +18,7 @@ Viktiga sidor:
 ## Korta regler
 
 1. **Kod vinner** — vid tvivel, läs `app/` och `tests/` ([source_authority.md](docs/llm_wiki/source_authority.md))
-2. **Små ändringar** — ett problem i taget; kör `PYTHONPATH=. pytest -q`
+2. **Små ändringar** — ett problem i taget; kör `uv run pytest -q`
 3. **Inga secrets i git** — aldrig committa `.env`, `token_store.json` eller riktiga tokens
 4. **Läs får köras** — kalender/mail-read är OK
 5. **Skriv kräver bekräftelse** — implementera inte autonom send/create utan safety-lager
@@ -42,9 +42,11 @@ Viktiga sidor:
 ## Test och körning
 
 ```bash
-pip install -r requirements.txt
-PYTHONPATH=. pytest -q
-uvicorn app.main:app --reload --port 8000
+uv sync --group dev
+uv run pytest -q
+uv run uvicorn app.main:app --reload --port 8000
 ```
+
+**Source of truth:** `pyproject.toml` + `uv.lock` (`requirements.txt` är legacy-fallback).
 
 Se [README.md](README.md) och [docs/llm_wiki/testing.md](docs/llm_wiki/testing.md).

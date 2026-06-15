@@ -13,21 +13,23 @@ Detta repo är **inte** Fibonacci eller Genesis-Core-V2.
 
 ## Installation
 
+**Source of truth:** `pyproject.toml` + `uv.lock`. `requirements.txt` finns kvar som legacy-fallback.
+
 ```bash
 git clone <repo-url>
 cd home
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+uv sync --group dev
 cp .env.example .env        # fyll i dina Azure-värden lokalt
 ```
+
+Utan [uv](https://docs.astral.sh/uv/): `pip install -r requirements.txt` (ej låst; föredra uv).
 
 ## Lokal körning
 
 ### FastAPI (REST + OAuth)
 
 ```bash
-uvicorn app.main:app --reload --port 8000
+uv run uvicorn app.main:app --reload --port 8000
 ```
 
 | Endpoint | Beskrivning |
@@ -41,13 +43,13 @@ uvicorn app.main:app --reload --port 8000
 **Stdio** — lokala MCP-klienter (Cursor, Claude Desktop):
 
 ```bash
-PYTHONPATH=. python -m app.mcp.server
+uv run python -m app.mcp.server
 ```
 
 **HTTP / streamable** — ChatGPT App/Connector-förberedelse:
 
 ```bash
-PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001
+uv run python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 ```
 
 **Tunnel-test (dev only, ej production):** DNS rebinding-skydd tillåter endast localhost som default. För HTTPS-tunnel, sätt explicit tillåten tunnel-host:
@@ -55,10 +57,10 @@ PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 ```bash
 # Exempel: temporär tunnel-domän från localhost.run / ngrok / cloudflared
 export MCP_DEV_ALLOWED_HOSTS=your-tunnel-host.example.com
-PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001
+uv run python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 
 # Alternativ: CLI-flagga (samma dev-only semantik)
-PYTHONPATH=. python -m app.mcp.http_server --dev-allowed-host your-tunnel-host.example.com
+uv run python -m app.mcp.http_server --dev-allowed-host your-tunnel-host.example.com
 ```
 
 MCP connector URL: `https://<tunnel-host>/mcp` — exponera **endast** port 8001, inte REST/OAuth på 8000.
@@ -71,16 +73,14 @@ MCP connector URL: `https://<tunnel-host>/mcp` — exponera **endast** port 8001
 
 ```powershell
 # Windows PowerShell
-$env:PYTHONPATH="."
 $env:MCP_DEV_OPENAI_TUNNEL="1"
-python -m app.mcp.http_server --host 127.0.0.1 --port 8001
+uv run python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 ```
 
 ```bash
 # bash
-export PYTHONPATH=.
 export MCP_DEV_OPENAI_TUNNEL=1
-PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001
+uv run python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 # eller: --openai-tunnel
 ```
 
@@ -110,7 +110,7 @@ Platform-tunnel kräver lokal [tunnel-client](https://github.com/openai/tunnel-c
 ## Tester
 
 ```bash
-PYTHONPATH=. pytest -q
+uv run pytest -q
 ```
 
 Tester kräver inte riktiga Microsoft-credentials. Se [docs/llm_wiki/testing.md](docs/llm_wiki/testing.md).

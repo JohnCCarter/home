@@ -5,23 +5,23 @@
 Från repo-roten:
 
 ```bash
-pip install -r requirements.txt
-PYTHONPATH=. pytest -q
+uv sync --group dev
+uv run pytest -q
 ```
 
 Verbose:
 
 ```bash
-PYTHONPATH=. pytest -v
+uv run pytest -v
 ```
 
 Enskild fil:
 
 ```bash
-PYTHONPATH=. pytest tests/test_auth.py -v
+uv run pytest tests/test_auth.py -v
 ```
 
-`PYTHONPATH=.` behövs eftersom `app` inte är installerat som paket än.
+`pythonpath = ["."]` i `pyproject.toml` gör att `PYTHONPATH=.` inte behövs med `uv run pytest`.
 
 ## Principer
 

@@ -33,6 +33,7 @@ Senast uppdaterad: 2026-06-15 (OpenAI Secure MCP Tunnel runtime)
 - [x] MCP → `app/tools/` → providers (ingen direkt provider-access)
 - [x] Skriv-actions disabled; read-only scopes endast
 - [x] Tester (tool-kontrakt, MCP stdio och HTTP)
+- [x] **uv-pakethantering** — `pyproject.toml` + `uv.lock` (source of truth; `requirements.txt` legacy-fallback)
 
 ## Write-actions
 
@@ -46,21 +47,21 @@ Fortfarande **avstängda**:
 
 Öppna **tre terminaler** (Git Bash rekommenderas på Windows). Använd `export` — inte PowerShell `$env:` i Git Bash.
 
+Första gången: `uv sync --group dev` från repo-roten.
+
 ### Terminal 1 — Backend (REST + OAuth)
 
 ```bash
 cd <repo-root>
-export PYTHONPATH=.
-uvicorn app.main:app --port 8000
+uv run uvicorn app.main:app --port 8000
 ```
 
 ### Terminal 2 — MCP HTTP
 
 ```bash
 cd <repo-root>
-export PYTHONPATH=.
 export MCP_DEV_OPENAI_TUNNEL=1
-python -m app.mcp.http_server --host 127.0.0.1 --port 8001
+uv run python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 ```
 
 | | |
@@ -112,15 +113,14 @@ Får **aldrig** committas, visas i chat eller skrivas i dokumentation:
 ### Stdio
 
 ```bash
-PYTHONPATH=. python -m app.mcp.server
+uv run python -m app.mcp.server
 ```
 
 ### HTTP / streamable
 
 ```bash
-export PYTHONPATH=.
 export MCP_DEV_OPENAI_TUNNEL=1
-python -m app.mcp.http_server --host 127.0.0.1 --port 8001
+uv run python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 ```
 
 DNS rebinding-skydd är **på** som default (localhost only). `MCP_DEV_OPENAI_TUNNEL=1` lägger till ChatGPT/OpenAI **origins** only.
@@ -129,7 +129,7 @@ DNS rebinding-skydd är **på** som default (localhost only). `MCP_DEV_OPENAI_TU
 
 ```bash
 export MCP_DEV_ALLOWED_HOSTS=<temporary-tunnel-host>
-PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001
+uv run python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 ```
 
 ## Nästa steg (efter ChatGPT-test)
@@ -141,8 +141,8 @@ PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 ## Senaste verifiering
 
 ```text
-Kommando: PYTHONPATH=. pytest -q
-Resultat: (se commit-rapport)
+Kommando: uv run pytest -q
+Resultat: 77 passed
 Graph: read-only via tools + MCP (stdio + HTTP)
 Datum: 2026-06-15
 ```

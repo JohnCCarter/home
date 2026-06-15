@@ -17,6 +17,14 @@ Lätt process — ingen promotion gates, ingen trading-governance.
 2. Kolla [handoff.md](handoff.md) för pågående arbete
 3. Håll scope minimalt — matcha befintlig stil i `app/`
 
+## Pakethantering (uv)
+
+**Source of truth:** `pyproject.toml` + `uv.lock`. `requirements.txt` är legacy-fallback.
+
+```bash
+uv sync --group dev
+```
+
 ## Under utveckling
 
 - **Providers** — affärslogik mot Graph/Google
@@ -28,13 +36,13 @@ Lätt process — ingen promotion gates, ingen trading-governance.
 
 ```bash
 # Från repo-roten
-PYTHONPATH=. pytest -q
+uv run pytest -q
 ```
 
 Valfritt lokalt:
 
 ```bash
-uvicorn app.main:app --reload --port 8000
+uv run uvicorn app.main:app --reload --port 8000
 ```
 
 Kräver `.env` med Azure-värden för auth; `/calendar` och `/mail` fungerar med mock utan inloggning.

@@ -1,0 +1,22 @@
+[project]
+name = "home-agent"
+version = "0.1.0"
+description = "Local read-only Home Agent with Microsoft Graph and MCP tools"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "httpx",
+    "python-dotenv",
+    "mcp",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
