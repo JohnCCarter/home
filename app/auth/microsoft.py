@@ -107,7 +107,13 @@ async def microsoft_callback(code: Optional[str] = None, state: Optional[str] = 
     if not code:
         raise HTTPException(status_code=400, detail="Missing authorization code")
 
-    code_verifier, _ = _pending_states.pop(state)
+    code_verifier, created_at = _pending_states[state]
+    now = datetime.now(timezone.utc)
+    if (now - created_at).total_seconds() > _STATE_TTL_SECONDS:
+        del _pending_states[state]
+        raise HTTPException(status_code=400, detail="OAuth state has expired")
+
+    del _pending_states[state]
 
     try:
         token_data = await _exchange_code_for_tokens(code, code_verifier)

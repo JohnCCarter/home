@@ -18,14 +18,21 @@ def _normalize_tokens(tokens: Dict[str, Any]) -> Dict[str, Any]:
 
 def save_tokens(tokens: Dict[str, Any]) -> None:
     TOKEN_STORE_PATH.write_text(json.dumps(_normalize_tokens(tokens), indent=2), encoding="utf-8")
-    TOKEN_STORE_PATH.chmod(0o600)
+    try:
+        TOKEN_STORE_PATH.chmod(0o600)
+    except OSError:
+        pass
 
 
 def load_tokens() -> Optional[Dict[str, Any]]:
     if not TOKEN_STORE_PATH.exists():
         return None
 
-    data = json.loads(TOKEN_STORE_PATH.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(TOKEN_STORE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, ValueError):
+        return None
+
     if is_token_expired(data):
         return None
     return data
