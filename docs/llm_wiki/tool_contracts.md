@@ -1,104 +1,97 @@
 # Tool-kontrakt
 
-Alla tools ska returnera **strukturerad JSON** med konsekvent form:
+Alla read-only tools returnerar **samma JSON-form** via `app/tools/contracts.py`.
+
+## Success
 
 ```json
 {
   "ok": true,
-  "data": { },
+  "tool": "read_calendar",
+  "provider": "outlook",
+  "data": [],
   "error": null
 }
 ```
 
-Vid fel: `ok: false`, `data: null`, `error` med kod och meddelande.
+## Failure
 
-**Status idag:** Tools är definierade som kontrakt; REST-endpoints (`GET /calendar`, `GET /mail`) och provider-metoder implementerar delar av read-flödet. Ett dedikerat `app/tools/`-lager är planerat.
+```json
+{
+  "ok": false,
+  "tool": "read_calendar",
+  "provider": "outlook",
+  "data": null,
+  "error": {
+    "code": "auth_required",
+    "message": "Please re-authenticate via /auth/microsoft/login",
+    "retryable": false
+  }
+}
+```
 
----
+## Error codes
+
+| Code | HTTP | Retryable | Typiskt scenario |
+|------|------|-----------|------------------|
+| `auth_required` | 401 | nej | Token saknas/expired, refresh misslyckades |
+| `permission_denied` | 403 | nej | Otillräcklig Graph-behörighet |
+| `not_found` | 404 | nej | Mail hittades inte |
+| `rate_limited` | 429 | ja | Graph throttling |
+| `provider_error` | 502 | ja | Graph 5xx |
+| `validation_error` | 400 | nej | Ogiltig input (t.ex. tom `message_id`) |
+| `unknown_error` | 500 | nej | Övrigt provider-fel |
+
+## Implementerade tools (read-only)
+
+| Tool | Modul | Provider-metod |
+|------|-------|----------------|
+| `read_calendar` | `app/tools/calendar_tools.py` | `read_calendar()` |
+| `read_recent_emails` | `app/tools/email_tools.py` | `read_recent_emails()` |
+| `read_email` | `app/tools/email_tools.py` | `read_email(message_id)` |
+
+Write-tools (`create_calendar_event`, `draft_email`, `send_email`) är **inte** implementerade i tool-lagret.
+
+## Flöde
+
+```text
+HTTP route → app/tools → provider → Graph/mock
+```
+
+| REST endpoint | Tool |
+|---------------|------|
+| `GET /calendar` | `read_calendar()` |
+| `GET /mail` | `read_recent_emails()` |
+| `GET /mail/{message_id}` | `read_email(message_id)` |
+
+REST returnerar `data`-delen vid success (bakåtkompatibelt). Tool-lagret används internt; framtida MCP/ChatGPT kan anropa samma tools och få full `ToolResult`.
 
 ## `read_calendar`
 
-Läser kommande kalenderhändelser.
-
 | | |
 |---|---|
-| **Input** | `limit` (valfri int, default 10), `time_min` / `time_max` (valfria ISO-8601, senare) |
-| **Output** | Lista av händelser: `id`, `subject`, `start`, `end` (ISO-8601) |
-| **Provider** | `OutlookProvider.read_calendar()` / `MockProvider` |
+| **Input** | Inga (limit via provider default 10) |
+| **Output `data`** | Lista: `id`, `subject`, `start`, `end` (ISO-8601) |
 | **Säkerhet** | Läs — körs direkt |
-
----
-
-## `create_calendar_event`
-
-Skapar kalenderhändelse.
-
-| | |
-|---|---|
-| **Input** | `subject`, `start`, `end`, valfritt `location`, `attendees` |
-| **Output** | Skapad händelse med `id` |
-| **Status** | **Ej implementerad** — `NotImplementedError("disabled in MVP phase")` |
-| **Säkerhet** | Skriv — kräver användarbekräftelse; kräver `Calendars.ReadWrite` (inte aktiverat än) |
-
----
 
 ## `read_recent_emails`
 
-Läser senaste meddelanden i inkorgen.
-
 | | |
 |---|---|
-| **Input** | `limit` (valfri int, default 10), valfri `folder` (senare) |
-| **Output** | Lista: `id`, `subject`, `sender`, `received_at` |
-| **Provider** | `OutlookProvider.read_recent_emails()` / `MockProvider` |
+| **Input** | Inga (limit via provider default 10) |
+| **Output `data`** | Lista: `id`, `subject`, `sender`, `received_at` |
 | **Säkerhet** | Läs — körs direkt |
 
----
-
 ## `read_email`
-
-Läser ett enskilt meddelande (brödtext/HTML).
 
 | | |
 |---|---|
 | **Input** | `message_id` (str) |
-| **Output** | `id`, `subject`, `sender`, `received_at`, `body_preview` eller `body` |
-| **Status** | **Planerad** — inte exponerad än |
-| **Säkerhet** | Läs — körs direkt |
+| **Output `data`** | `id`, `subject`, `sender`, `received_at`, `body_preview`, `body` |
+| **Säkerhet** | Läs — körs direkt; body loggas aldrig |
 
----
+## Planerade write-tools (ej implementerade)
 
-## `draft_email`
-
-Skapar utkast utan att skicka.
-
-| | |
-|---|---|
-| **Input** | `to`, `subject`, `body`, valfritt `cc`, `bcc` |
-| **Output** | `draft_id`, sammanfattning av utkast |
-| **Status** | **Planerad** |
-| **Säkerhet** | Skriv — kräver bekräftelse innan sparning |
-
----
-
-## `send_email`
-
-Skickar e-post.
-
-| | |
-|---|---|
-| **Input** | `to`, `subject`, `body`, valfritt `cc`, `bcc`; eller `draft_id` |
-| **Output** | `message_id`, `status: "sent"` |
-| **Status** | **Ej implementerad** — disabled i MVP |
-| **Säkerhet** | Skriv — kräver explicit bekräftelse; kräver `Mail.Send` (inte aktiverat än) |
-
----
-
-## Mappning REST → tools (interim)
-
-| Endpoint | Tool |
-|----------|------|
-| `GET /calendar` | `read_calendar` |
-| `GET /mail` | `read_recent_emails` |
-
-Nya capabilities ska gå via tool-lager när det finns — inte som ad hoc-endpoints.
+- `create_calendar_event` — kräver `Calendars.ReadWrite` + safety
+- `draft_email` / `send_email` — kräver `Mail.Send` + safety
+- Inga delete-tools i MVP

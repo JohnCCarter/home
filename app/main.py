@@ -1,56 +1,14 @@
-from dataclasses import asdict
-from html import escape
-from typing import Any, List
+from typing import List
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
-from app.auth.microsoft import get_valid_tokens, router as microsoft_auth_router
-from app.auth.token_store import has_stored_tokens
-from app.providers.base import CalendarEvent, EmailDetail, EmailMessage
-from app.providers.mock_provider import MockProvider
-from app.providers.outlook_provider import GraphApiError, OutlookProvider
+from app.auth.microsoft import router as microsoft_auth_router
+from app.tools import http_status_for_error, read_calendar, read_email, read_recent_emails
+from app.tools.contracts import ToolResult
 
 app = FastAPI(title="genesis-core-home-agent")
 app.include_router(microsoft_auth_router)
-
-
-async def _get_provider():
-    tokens = await get_valid_tokens()
-    access_token = tokens.get("access_token") if tokens else None
-    if access_token:
-        return OutlookProvider(access_token=access_token)
-    if has_stored_tokens():
-        raise HTTPException(
-            status_code=401,
-            detail="Token expired or refresh failed. Please re-authenticate via /auth/microsoft/login",
-        )
-    return MockProvider()
-
-
-def _serialize(items: List[Any]) -> List[dict]:
-    serialized: List[dict] = []
-    for item in items:
-        row = asdict(item)
-        for key, value in row.items():
-            if hasattr(value, "isoformat"):
-                row[key] = value.isoformat()
-        serialized.append(row)
-    return serialized
-
-
-def _serialize_email_detail(detail: EmailDetail) -> dict:
-    return {
-        "id": detail.id,
-        "subject": detail.subject,
-        "sender": detail.sender,
-        "received_at": detail.received_at.isoformat(),
-        "body_preview": detail.body_preview,
-        "body": {
-            "content_type": detail.body.content_type,
-            "content": detail.body.content,
-        },
-    }
 
 
 def _wants_html(request: Request) -> bool:
@@ -59,6 +17,8 @@ def _wants_html(request: Request) -> bool:
 
 
 def _error_page(title: str, message: str, status_code: int = 500) -> HTMLResponse:
+    from html import escape
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -80,6 +40,8 @@ def _error_page(title: str, message: str, status_code: int = 500) -> HTMLRespons
 
 
 def _list_page(title: str, items: List[dict], columns: List[str]) -> HTMLResponse:
+    from html import escape
+
     if not items:
         body = "<p>No items found.</p>"
     else:
@@ -112,17 +74,32 @@ def _list_page(title: str, items: List[dict], columns: List[str]) -> HTMLRespons
     return HTMLResponse(content=html)
 
 
+def _raise_from_tool_result(result: ToolResult) -> None:
+    assert result.error is not None
+    raise HTTPException(
+        status_code=http_status_for_error(result.error.code),
+        detail=result.error.message,
+    )
+
+
+def _handle_tool_result(result: ToolResult, request: Request, html_title: str):
+    if result.ok:
+        return result.data
+
+    if _wants_html(request):
+        status = http_status_for_error(result.error.code) if result.error else 500
+        message = result.error.message if result.error else "Request failed"
+        return _error_page(html_title, message, status_code=status)
+
+    _raise_from_tool_result(result)
+
+
 @app.get("/calendar")
 async def get_calendar(request: Request):
-    try:
-        provider = await _get_provider()
-        events: List[CalendarEvent] = await provider.read_calendar()
-        data = _serialize(events)
-    except GraphApiError as exc:
-        if _wants_html(request):
-            return _error_page("Calendar unavailable", exc.message, status_code=exc.status_code)
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-
+    result = await read_calendar()
+    data = _handle_tool_result(result, request, "Calendar unavailable")
+    if isinstance(data, HTMLResponse):
+        return data
     if _wants_html(request):
         return _list_page("Calendar", data, ["subject", "start", "end"])
     return data
@@ -130,15 +107,10 @@ async def get_calendar(request: Request):
 
 @app.get("/mail")
 async def get_mail(request: Request):
-    try:
-        provider = await _get_provider()
-        emails: List[EmailMessage] = await provider.read_recent_emails()
-        data = _serialize(emails)
-    except GraphApiError as exc:
-        if _wants_html(request):
-            return _error_page("Mail unavailable", exc.message, status_code=exc.status_code)
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-
+    result = await read_recent_emails()
+    data = _handle_tool_result(result, request, "Mail unavailable")
+    if isinstance(data, HTMLResponse):
+        return data
     if _wants_html(request):
         return _list_page("Mail", data, ["subject", "sender", "received_at"])
     return data
@@ -146,11 +118,8 @@ async def get_mail(request: Request):
 
 @app.get("/mail/{message_id:path}")
 async def get_mail_message(message_id: str, request: Request):
-    try:
-        provider = await _get_provider()
-        email: EmailDetail = await provider.read_email(message_id)
-        return _serialize_email_detail(email)
-    except GraphApiError as exc:
-        if _wants_html(request):
-            return _error_page("Mail unavailable", exc.message, status_code=exc.status_code)
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    result = await read_email(message_id)
+    data = _handle_tool_result(result, request, "Mail unavailable")
+    if isinstance(data, HTMLResponse):
+        return data
+    return data

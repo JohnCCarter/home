@@ -4,6 +4,16 @@ Enkel logg över arkitektur- och scope-beslut. Nyaste överst.
 
 ---
 
+## 2026-06-15 — app/tools/ med enhetligt read-only JSON-kontrakt
+
+**Beslut:** Inför `app/tools/` med `ToolResult` och read-only tools; REST-endpoints delegerar till tools.
+
+**Motivering:** Samma kontrakt för framtida MCP/ChatGPT App/wake-word utan att duplicera provider-logik.
+
+**Konsekvens:** Endast read-tools; write förblir i providers som disabled tills safety finns.
+
+---
+
 ## 2026-06-15 — read_email för enskilt meddelande
 
 **Beslut:** Exponera `GET /mail/{message_id}` med normaliserat JSON-svar (inkl. body).

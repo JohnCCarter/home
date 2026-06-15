@@ -1,58 +1,43 @@
 # Handoff
 
-Senast uppdaterad: 2026-06-15 (`read_email` implementerad)
+Senast uppdaterad: 2026-06-15 (`app/tools/` read-only tool-lager)
 
 ## Aktuell status
 
-**Read-only MVP fungerar end-to-end** mot riktig Microsoft Graph med personligt Microsoft-konto. **Token refresh** sker automatiskt. **`read_email`** läser enskilt meddelande via message id.
+**Read-only MVP** med Graph E2E, token refresh, `read_email`, och **`app/tools/`** med enhetligt JSON-kontrakt. REST-endpoints delegerar till tools.
 
 ## Klart
 
-- [x] FastAPI-app med `GET /calendar`, `GET /mail`, **`GET /mail/{message_id}`**
-- [x] Microsoft OAuth: login, callback, PKCE, state-validering
-- [x] Token-lagring + **token refresh** (`get_valid_tokens()`)
-- [x] `MockProvider` — fallback utan inloggning
-- [x] `OutlookProvider` — read calendar, inbox, **enskilt mail**
-- [x] **Microsoft Graph read-only fungerar end-to-end**
-- [x] `GET /calendar` — riktiga Graph-händelser
-- [x] `GET /mail` — riktiga Graph-mail (lista)
-- [x] **`GET /mail/{message_id}`** — normaliserat JSON med body
-- [x] Personligt Microsoft-konto: `AZURE_TENANT_ID=common` + MSA manifest
-- [x] Graph-fel: 401/403/404/429/5xx med tydliga meddelanden (ingen body i loggar)
+- [x] FastAPI: `GET /calendar`, `GET /mail`, `GET /mail/{message_id}`
+- [x] OAuth + token refresh (`get_valid_tokens()`)
+- [x] Providers: Mock + Outlook (read-only Graph)
+- [x] **`app/tools/`** — `read_calendar`, `read_recent_emails`, `read_email`
+- [x] **`ToolResult`** — `ok`, `tool`, `provider`, `data`, `error` med standard error codes
+- [x] Endpoints → tools → providers → Graph/mock
 - [x] Skriv-actions disabled; read-only scopes endast
-- [x] Tester (auth, config, outlook, refresh, **read_email**)
-- [x] LLM Wiki + `AGENTS.md` + `README.md`
+- [x] Tester (inkl. tool-kontrakt)
+- [x] LLM Wiki uppdaterad
 
 ## Write-actions
 
-Fortfarande **avstängda** i MVP:
+Fortfarande **avstängda**:
 
-- `create_event`, `send_email`, `mark_as_read` → `NotImplementedError`
+- Inga write-tools i `app/tools/`
 - Inga `Mail.Send`, `Mail.ReadWrite`, `Calendars.ReadWrite`
-- Inga delete/move/reply/forward/attachments
+- Inga delete/move/reply/forward
 
 ## Nästa steg
 
-1. **`app/tools/`** — enhetligt JSON-kontrakt
+1. **MCP / ChatGPT App connector skeleton** — exponera samma tools
 2. **`app/safety/`** — bekräftelse för write-actions (senare)
-3. ChatGPT / MCP — exponera tools mot samma backend
-4. Google provider — parallellt interface till `base.py`
-5. Wake-word-sidecar — senare
-
-## Kända risker
-
-| Risk | Åtgärd |
-|------|--------|
-| Refresh token kan revoke:as | 401 + ny login |
-| Mail body returneras via API men loggas aldrig | Policy i provider/endpoint |
-| Graph message ids kan innehålla `/` | Route `{message_id:path}` + URL-encoding |
-| Inget safety-lager än | Håll write disabled |
+3. Google provider
+4. Wake-word-sidecar
 
 ## Senaste verifiering
 
 ```text
 Kommando: PYTHONPATH=. pytest -q
-Resultat: 32 passed
-Graph: /calendar, /mail, /mail/{id} read-only
+Resultat: 43 passed
+Graph: read-only via tools
 Datum: 2026-06-15
 ```
