@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse
 
 from app.auth.microsoft import get_valid_tokens, router as microsoft_auth_router
 from app.auth.token_store import has_stored_tokens
-from app.providers.base import CalendarEvent, EmailMessage
+from app.providers.base import CalendarEvent, EmailDetail, EmailMessage
 from app.providers.mock_provider import MockProvider
 from app.providers.outlook_provider import GraphApiError, OutlookProvider
 
@@ -37,6 +37,20 @@ def _serialize(items: List[Any]) -> List[dict]:
                 row[key] = value.isoformat()
         serialized.append(row)
     return serialized
+
+
+def _serialize_email_detail(detail: EmailDetail) -> dict:
+    return {
+        "id": detail.id,
+        "subject": detail.subject,
+        "sender": detail.sender,
+        "received_at": detail.received_at.isoformat(),
+        "body_preview": detail.body_preview,
+        "body": {
+            "content_type": detail.body.content_type,
+            "content": detail.body.content,
+        },
+    }
 
 
 def _wants_html(request: Request) -> bool:
@@ -128,3 +142,15 @@ async def get_mail(request: Request):
     if _wants_html(request):
         return _list_page("Mail", data, ["subject", "sender", "received_at"])
     return data
+
+
+@app.get("/mail/{message_id:path}")
+async def get_mail_message(message_id: str, request: Request):
+    try:
+        provider = await _get_provider()
+        email: EmailDetail = await provider.read_email(message_id)
+        return _serialize_email_detail(email)
+    except GraphApiError as exc:
+        if _wants_html(request):
+            return _error_page("Mail unavailable", exc.message, status_code=exc.status_code)
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc

@@ -23,6 +23,22 @@ class EmailMessage:
     received_at: datetime
 
 
+@dataclass
+class EmailBody:
+    content_type: str
+    content: str
+
+
+@dataclass
+class EmailDetail:
+    id: str
+    subject: str
+    sender: str
+    received_at: datetime
+    body_preview: str
+    body: EmailBody
+
+
 class CalendarProvider(ABC):
     @abstractmethod
     async def read_calendar(self) -> List[CalendarEvent]:
@@ -35,6 +51,10 @@ class CalendarProvider(ABC):
 class EmailProvider(ABC):
     @abstractmethod
     async def read_recent_emails(self) -> List[EmailMessage]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def read_email(self, message_id: str) -> EmailDetail:
         raise NotImplementedError
 
     async def send_email(self, *args, **kwargs):

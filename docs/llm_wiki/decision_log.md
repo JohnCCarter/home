@@ -4,6 +4,16 @@ Enkel logg över arkitektur- och scope-beslut. Nyaste överst.
 
 ---
 
+## 2026-06-15 — read_email för enskilt meddelande
+
+**Beslut:** Exponera `GET /mail/{message_id}` med normaliserat JSON-svar (inkl. body).
+
+**Motivering:** Komplettera read-only mail med enskild läsning efter list-endpoint.
+
+**Konsekvens:** Fortfarande read-only; ingen mark-as-read, delete eller send.
+
+---
+
 ## 2026-06-15 — Token refresh för read-only Graph
 
 **Beslut:** Vid utgången access token ska `refresh_token` användas automatiskt innan Graph-anrop.
