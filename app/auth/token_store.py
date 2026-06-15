@@ -24,13 +24,20 @@ def save_tokens(tokens: Dict[str, Any]) -> None:
         pass
 
 
-def load_tokens() -> Optional[Dict[str, Any]]:
+def load_stored_tokens() -> Optional[Dict[str, Any]]:
+    """Load tokens from disk without checking expiry (for refresh flow)."""
     if not TOKEN_STORE_PATH.exists():
         return None
 
     try:
-        data = json.loads(TOKEN_STORE_PATH.read_text(encoding="utf-8"))
+        return json.loads(TOKEN_STORE_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, ValueError):
+        return None
+
+
+def load_tokens() -> Optional[Dict[str, Any]]:
+    data = load_stored_tokens()
+    if not data:
         return None
 
     if is_token_expired(data):

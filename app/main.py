@@ -5,8 +5,8 @@ from typing import Any, List
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
-from app.auth.microsoft import router as microsoft_auth_router
-from app.auth.token_store import has_stored_tokens, load_tokens
+from app.auth.microsoft import get_valid_tokens, router as microsoft_auth_router
+from app.auth.token_store import has_stored_tokens
 from app.providers.base import CalendarEvent, EmailMessage
 from app.providers.mock_provider import MockProvider
 from app.providers.outlook_provider import GraphApiError, OutlookProvider
@@ -16,14 +16,14 @@ app.include_router(microsoft_auth_router)
 
 
 async def _get_provider():
-    tokens = load_tokens()
+    tokens = await get_valid_tokens()
     access_token = tokens.get("access_token") if tokens else None
     if access_token:
         return OutlookProvider(access_token=access_token)
     if has_stored_tokens():
         raise HTTPException(
             status_code=401,
-            detail="Token expired. Please re-authenticate via /auth/microsoft/login",
+            detail="Token expired or refresh failed. Please re-authenticate via /auth/microsoft/login",
         )
     return MockProvider()
 

@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth/microsoft", tags=["auth"])
 
+READ_ONLY_SCOPES = "offline_access User.Read Mail.Read Calendars.Read"
+
 _MAX_PENDING_STATES = 1000
 _STATE_TTL_SECONDS = 600
 
@@ -24,6 +26,12 @@ _pending_states: Dict[str, tuple[str, datetime]] = {}
 
 
 class TokenExchangeError(Exception):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
+
+
+class TokenRefreshError(Exception):
     def __init__(self, message: str) -> None:
         super().__init__(message)
         self.message = message
@@ -73,6 +81,30 @@ def _token_exchange_error_message(response: httpx.Response) -> str:
     return "Microsoft token exchange failed. Verify Azure app credentials and redirect URI."
 
 
+def _token_refresh_error_message(response: httpx.Response) -> str:
+    try:
+        body = response.json()
+    except ValueError:
+        return "Microsoft token refresh failed. Please sign in again."
+
+    error_codes = body.get("error_codes") or []
+    if 7000215 in error_codes:
+        return "Invalid client secret. Check AZURE_CLIENT_SECRET in .env."
+    if body.get("error") in {"invalid_grant", "interaction_required"}:
+        return "Refresh token expired or revoked. Please sign in again."
+    return "Microsoft token refresh failed. Please sign in again."
+
+
+def _merge_token_response(existing: Dict[str, Any], updated: Dict[str, Any]) -> Dict[str, Any]:
+    merged = {**existing, **updated}
+    if "refresh_token" not in updated and existing.get("refresh_token"):
+        merged["refresh_token"] = existing["refresh_token"]
+    if "expires_in" in updated and "expires_at" not in updated:
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=int(updated["expires_in"]))
+        merged["expires_at"] = expires_at.isoformat()
+    return merged
+
+
 def _base64url(value: bytes) -> str:
     return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
 
@@ -91,7 +123,7 @@ def _build_authorization_url(state: str, code_challenge: str) -> str:
             "response_type": "code",
             "redirect_uri": settings.azure_redirect_uri,
             "response_mode": "query",
-            "scope": "offline_access User.Read Mail.Read Calendars.Read",
+            "scope": READ_ONLY_SCOPES,
             "state": state,
             "code_challenge": code_challenge,
             "code_challenge_method": "S256",
@@ -110,7 +142,7 @@ async def _exchange_code_for_tokens(code: str, code_verifier: str) -> Dict[str, 
         "code": code,
         "redirect_uri": settings.azure_redirect_uri,
         "code_verifier": code_verifier,
-        "scope": "offline_access User.Read Mail.Read Calendars.Read",
+        "scope": READ_ONLY_SCOPES,
     }
 
     async with httpx.AsyncClient(timeout=10.0) as client:
@@ -134,6 +166,64 @@ async def _exchange_code_for_tokens(code: str, code_verifier: str) -> Dict[str, 
         token_data["expires_at"] = expires_at.isoformat()
 
     return token_data
+
+
+async def refresh_access_token(refresh_token: str) -> Dict[str, Any]:
+    settings = get_settings()
+    token_url = f"{settings.oauth_authority_base}/token"
+    payload = {
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+        "client_id": settings.azure_client_id,
+        "client_secret": settings.azure_client_secret,
+        "scope": READ_ONLY_SCOPES,
+    }
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.post(token_url, data=payload)
+        if response.is_error:
+            error_codes: list[Any] = []
+            try:
+                error_codes = response.json().get("error_codes") or []
+            except ValueError:
+                pass
+            logger.error(
+                "Microsoft token refresh failed: status=%s error_codes=%s",
+                response.status_code,
+                error_codes,
+            )
+            raise TokenRefreshError(_token_refresh_error_message(response))
+
+        token_data = response.json()
+
+    if "expires_in" in token_data and "expires_at" not in token_data:
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=int(token_data["expires_in"]))
+        token_data["expires_at"] = expires_at.isoformat()
+
+    return token_data
+
+
+async def get_valid_tokens() -> Optional[Dict[str, Any]]:
+    stored = token_store.load_stored_tokens()
+    if not stored:
+        return None
+
+    if not token_store.is_token_expired(stored):
+        return stored
+
+    refresh_token = stored.get("refresh_token")
+    if not refresh_token:
+        return None
+
+    try:
+        refreshed = await refresh_access_token(refresh_token)
+    except TokenRefreshError:
+        return None
+
+    merged = _merge_token_response(stored, refreshed)
+    token_store.save_tokens(merged)
+    logger.info("Microsoft access token refreshed")
+    return merged
 
 
 def _purge_expired_states() -> None:

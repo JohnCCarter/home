@@ -4,6 +4,16 @@ Enkel logg över arkitektur- och scope-beslut. Nyaste överst.
 
 ---
 
+## 2026-06-15 — Token refresh för read-only Graph
+
+**Beslut:** Vid utgången access token ska `refresh_token` användas automatiskt innan Graph-anrop.
+
+**Motivering:** Undvika onödig re-login; behåll read-only-flödet stabilt.
+
+**Konsekvens:** Refresh använder samma read-only scopes; vid failure → 401 och ny login.
+
+---
+
 ## 2026-06-15 — Microsoft Graph read-only E2E verifierat
 
 **Beslut:** Read-only Graph är måluppfyllt för MVP: OAuth, token storage, `read_calendar`, `read_recent_emails`.
