@@ -19,7 +19,7 @@ Lätt process — ingen promotion gates, ingen trading-governance.
 
 ## Pakethantering (uv)
 
-**Source of truth:** `pyproject.toml` + `uv.lock`. `requirements.txt` är legacy-fallback.
+**Source of truth:** `pyproject.toml` + `uv.lock`. Använd `uv sync --group dev` — inte `requirements.txt`.
 
 ```bash
 uv sync --group dev

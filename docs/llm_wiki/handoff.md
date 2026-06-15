@@ -33,7 +33,7 @@ Senast uppdaterad: 2026-06-15 (OpenAI Secure MCP Tunnel runtime)
 - [x] MCP → `app/tools/` → providers (ingen direkt provider-access)
 - [x] Skriv-actions disabled; read-only scopes endast
 - [x] Tester (tool-kontrakt, MCP stdio och HTTP)
-- [x] **uv-pakethantering** — `pyproject.toml` + `uv.lock` (source of truth; `requirements.txt` legacy-fallback)
+- [x] **uv-pakethantering** — `pyproject.toml` + `uv.lock` (source of truth)
 
 ## Write-actions
 

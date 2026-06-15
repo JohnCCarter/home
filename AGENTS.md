@@ -47,6 +47,6 @@ uv run pytest -q
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
-**Source of truth:** `pyproject.toml` + `uv.lock` (`requirements.txt` är legacy-fallback).
+**Dependencies:** `pyproject.toml` + `uv.lock` — använd `uv sync --group dev`.
 
 Se [README.md](README.md) och [docs/llm_wiki/testing.md](docs/llm_wiki/testing.md).

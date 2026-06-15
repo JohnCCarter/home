@@ -13,7 +13,7 @@ Detta repo är **inte** Fibonacci eller Genesis-Core-V2.
 
 ## Installation
 
-**Source of truth:** `pyproject.toml` + `uv.lock`. `requirements.txt` finns kvar som legacy-fallback.
+Dependencies: **`pyproject.toml`** + **`uv.lock`** (source of truth). Installera med [uv](https://docs.astral.sh/uv/):
 
 ```bash
 git clone <repo-url>
@@ -21,8 +21,6 @@ cd home
 uv sync --group dev
 cp .env.example .env        # fyll i dina Azure-värden lokalt
 ```
-
-Utan [uv](https://docs.astral.sh/uv/): `pip install -r requirements.txt` (ej låst; föredra uv).
 
 ## Lokal körning
 

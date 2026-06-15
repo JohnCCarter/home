@@ -5,7 +5,7 @@ När dokumentation, kommentarer och kod inte stämmer överens — följ denna o
 ## 1. Kod i repot (högsta auktoritet)
 
 - Python-filer under `app/` och `tests/`
-- `requirements.txt`
+- `pyproject.toml` + `uv.lock`
 - Faktisk routing, scopes och felhantering i koden
 
 **Regel:** Om wikin säger X men koden gör Y — lita på koden och uppdatera wikin om du ändrar beteendet.
