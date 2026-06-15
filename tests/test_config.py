@@ -37,7 +37,8 @@ def test_get_settings_loads_from_dotenv(tmp_path, monkeypatch):
     assert settings.azure_redirect_uri == "http://localhost/callback"
 
 
-def test_missing_settings_raise_clear_error(monkeypatch):
+def test_missing_settings_raise_clear_error(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("AZURE_TENANT_ID", raising=False)
     monkeypatch.delenv("AZURE_CLIENT_ID", raising=False)
     monkeypatch.delenv("AZURE_CLIENT_SECRET", raising=False)
