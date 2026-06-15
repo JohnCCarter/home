@@ -1,10 +1,10 @@
 # Handoff
 
-Senast uppdaterad: 2026-06-15 (`app/mcp/` MCP skeleton)
+Senast uppdaterad: 2026-06-15 (`app/mcp/http_server.py` HTTP transport)
 
 ## Aktuell status
 
-**Read-only MVP** med Graph E2E, token refresh, `read_email`, **`app/tools/`**, och **MCP skeleton** som exponerar samma read-only tools.
+**Read-only MVP** med Graph E2E, token refresh, `read_email`, **`app/tools/`**, och **MCP** med både stdio och HTTP/streamable transport.
 
 ## Klart
 
@@ -15,9 +15,10 @@ Senast uppdaterad: 2026-06-15 (`app/mcp/` MCP skeleton)
 - [x] **`ToolResult`** — `ok`, `tool`, `provider`, `data`, `error` med standard error codes
 - [x] Endpoints → tools → providers → Graph/mock
 - [x] **`app/mcp/`** — MCP stdio-server (FastMCP), endast read-only tools
+- [x] **`app/mcp/http_server.py`** — streamable HTTP-transport på `/mcp`
 - [x] MCP → `app/tools/` → providers (ingen direkt provider-access)
 - [x] Skriv-actions disabled; read-only scopes endast
-- [x] Tester (inkl. tool-kontrakt och MCP-delegering)
+- [x] Tester (inkl. tool-kontrakt, MCP stdio och HTTP)
 - [x] LLM Wiki uppdaterad
 
 ## Write-actions
@@ -30,29 +31,41 @@ Fortfarande **avstängda**:
 
 ## Nästa steg
 
-1. **MCP HTTP/HTTPS transport** — lägg till streamable HTTP-transport eller adapter så MCP-endpointen är nåbar över HTTPS (krävs för ChatGPT App/Connector)
-2. **ChatGPT developer mode-test** — tunnel/HTTPS-endpoint mot MCP-servern (efter HTTP-transport)
-3. **`app/safety/`** — bekräftelse för write-actions (senare)
-4. Google provider
-5. Wake-word-sidecar
+1. **Tunnel/HTTPS + ChatGPT developer mode-test** — exponera `http://127.0.0.1:8001/mcp` via HTTPS (ngrok/Cloudflare e.d., ej i repo)
+2. **`app/safety/`** — bekräftelse för write-actions (senare)
+3. Google provider
+4. Wake-word-sidecar
 
-## MCP lokalt (stdio)
+## MCP lokalt
 
-**Current MCP skeleton uses stdio transport.** Det är giltigt som första MCP-skeleton och för lokala MCP-klienter (t.ex. Cursor, Claude Desktop).
+### Stdio (behålls)
 
 ```bash
 PYTHONPATH=. python -m app.mcp.server
 ```
 
-Stdio-transport; kräver giltig token via befintlig `/auth/microsoft/login` (samma som REST).
+För lokala MCP-klienter (Cursor, Claude Desktop). Stdio-transport.
 
-**ChatGPT App/Connector-test kräver nästa steg:** en HTTP/HTTPS-nåbar MCP-endpoint. Stdio räcker inte för ChatGPT developer mode — lägg till HTTP/streamable transport eller adapter, testa sedan via tunnel/HTTPS.
+### HTTP / streamable (ny)
+
+```bash
+PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001
+```
+
+| | |
+|---|---|
+| **Endpoint** | `http://127.0.0.1:8001/mcp` |
+| **Transport** | FastMCP `streamable-http` |
+| **Tools** | `read_calendar`, `read_recent_emails`, `read_email` |
+| **Auth** | Samma token-store som REST (`/auth/microsoft/login` på port 8000) |
+
+ChatGPT App/Connector kräver HTTPS — nästa steg är tunnel mot HTTP-endpointen ovan, inte ny OAuth.
 
 ## Senaste verifiering
 
 ```text
 Kommando: PYTHONPATH=. pytest -q
 Resultat: (se senaste körning i commit-rapport)
-Graph: read-only via tools + MCP
+Graph: read-only via tools + MCP (stdio + HTTP)
 Datum: 2026-06-15
 ```

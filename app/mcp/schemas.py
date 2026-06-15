@@ -6,6 +6,10 @@ READ_ONLY_TOOL_NAMES = (
     "read_email",
 )
 
+MCP_HTTP_DEFAULT_HOST = "127.0.0.1"
+MCP_HTTP_DEFAULT_PORT = 8001
+MCP_STREAMABLE_HTTP_PATH = "/mcp"
+
 TOOL_DESCRIPTIONS: dict[str, str] = {
     "read_calendar": "Read upcoming calendar events from the connected mailbox (read-only).",
     "read_recent_emails": "Read recent inbox messages (read-only).",

@@ -39,7 +39,8 @@ home/
 │   ├── mcp/                 # MCP / ChatGPT App connector (read-only)
 │   │   ├── bridge.py        # MCP → app/tools (ingen provider-access)
 │   │   ├── schemas.py       # Tool metadata
-│   │   └── server.py        # FastMCP stdio-server
+│   │   ├── server.py        # FastMCP stdio-server
+│   │   └── http_server.py   # FastMCP streamable HTTP-server
 │   └── providers/
 │       ├── base.py
 │       ├── mock_provider.py
@@ -66,12 +67,15 @@ home/
 
 ### `app/mcp/`
 
-- MCP-skeleton via officiella Python-SDK:t `mcp` (FastMCP)
+- MCP via officiella Python-SDK:t `mcp` (FastMCP)
 - Exponerar endast read-only tools: `read_calendar`, `read_recent_emails`, `read_email`
 - `bridge.py` anropar `app/tools/` — **aldrig** providers direkt
 - Returnerar full `ToolResult` som JSON (`to_dict()`)
-- **Transport idag:** stdio (`PYTHONPATH=. python -m app.mcp.server`) — giltigt för lokala MCP-klienter
-- **Nästa transport-steg:** HTTP/HTTPS (streamable) så ChatGPT App/Connector kan nå endpointen via tunnel/dev mode
+- **Stdio transport:** `PYTHONPATH=. python -m app.mcp.server` — lokala MCP-klienter (Cursor, Claude Desktop)
+- **HTTP transport (streamable):** `PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001`
+  - Endpoint: `http://127.0.0.1:8001/mcp` (FastMCP default `streamable_http_path`)
+- Båda transporterna delar samma `mcp`-instans, tools och `bridge.py`
+- **Nästa steg:** tunnel/HTTPS + ChatGPT developer mode-test
 
 ### `app/main.py`
 

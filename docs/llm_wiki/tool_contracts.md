@@ -61,9 +61,10 @@ HTTP route / MCP tool → app/tools → provider → Graph/mock
 | Klient | Väg |
 |--------|-----|
 | REST | `GET /calendar`, `GET /mail`, `GET /mail/{message_id}` |
-| MCP | `read_calendar`, `read_recent_emails`, `read_email` |
+| MCP (stdio) | `read_calendar`, `read_recent_emails`, `read_email` via `python -m app.mcp.server` |
+| MCP (HTTP) | Samma tools via `http://127.0.0.1:8001/mcp` (`python -m app.mcp.http_server`) |
 
-REST returnerar `data`-delen vid success (bakåtkompatibelt). MCP returnerar full `ToolResult`.
+REST returnerar `data`-delen vid success (bakåtkompatibelt). MCP returnerar full `ToolResult` oavsett transport.
 
 ## MCP tools (read-only)
 

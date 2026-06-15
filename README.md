@@ -24,6 +24,8 @@ cp .env.example .env        # fyll i dina Azure-värden lokalt
 
 ## Lokal körning
 
+### FastAPI (REST + OAuth)
+
 ```bash
 uvicorn app.main:app --reload --port 8000
 ```
@@ -33,6 +35,27 @@ uvicorn app.main:app --reload --port 8000
 | `GET /calendar` | Kalenderhändelser (mock eller Outlook) |
 | `GET /mail` | Senaste inkorgsmeddelanden |
 | `GET /auth/microsoft/login` | Starta Microsoft-inloggning |
+
+### MCP (read-only tools)
+
+**Stdio** — lokala MCP-klienter (Cursor, Claude Desktop):
+
+```bash
+PYTHONPATH=. python -m app.mcp.server
+```
+
+**HTTP / streamable** — ChatGPT App/Connector-förberedelse:
+
+```bash
+PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001
+```
+
+| | |
+|---|---|
+| MCP endpoint | `http://127.0.0.1:8001/mcp` |
+| Tools | `read_calendar`, `read_recent_emails`, `read_email` |
+
+OAuth sker via FastAPI på port 8000 (`/auth/microsoft/login`). MCP HTTP-servern använder samma token-store — ingen separat OAuth.
 
 Utan inloggning används mock-data. Efter OAuth sparas tokens i `token_store.json` (gitignored).
 
@@ -60,6 +83,8 @@ Korta agentregler: **[AGENTS.md](AGENTS.md)**
 app/
   auth/         Microsoft OAuth, token store
   providers/    Mock + Outlook (Graph)
+  tools/        Read-only tool layer (ToolResult)
+  mcp/          MCP stdio + HTTP transport
   main.py       FastAPI routes
 tests/
 docs/llm_wiki/  Agent-wiki

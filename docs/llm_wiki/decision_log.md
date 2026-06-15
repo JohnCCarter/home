@@ -4,6 +4,16 @@ Enkel logg över arkitektur- och scope-beslut. Nyaste överst.
 
 ---
 
+## 2026-06-15 — MCP HTTP/streamable transport för ChatGPT-förberedelse
+
+**Beslut:** Lägg till `app/mcp/http_server.py` med FastMCP `streamable-http` transport på `/mcp`; behåll stdio-server oförändrad som separat väg.
+
+**Motivering:** ChatGPT App/Connector kräver HTTP/HTTPS-nåbar MCP-endpoint. Streamable HTTP är SDK:s rekommenderade HTTP-transport.
+
+**Konsekvens:** Båda transporterna delar samma `mcp`-instans, tools och `bridge.py`. Default: `http://127.0.0.1:8001/mcp`. Nästa steg: tunnel/HTTPS + ChatGPT developer mode-test (utan tunnel-konfig i repo).
+
+---
+
 ## 2026-06-15 — MCP skeleton med read-only tools via app/tools/
 
 **Beslut:** Inför `app/mcp/` med FastMCP (`mcp`-paketet); exponera endast `read_calendar`, `read_recent_emails`, `read_email`.
