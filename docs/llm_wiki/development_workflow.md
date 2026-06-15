@@ -47,6 +47,18 @@ uv run uvicorn app.main:app --reload --port 8000
 
 Kräver `.env` med Azure-värden för auth; `/calendar` och `/mail` fungerar med mock utan inloggning.
 
+## Starta runtime (PowerShell scripts)
+
+Tre terminaler — ett script var:
+
+```powershell
+.\scripts\start_rest.ps1            # REST/OAuth :8000
+.\scripts\start_mcp.ps1             # MCP HTTP :8001 (MCP_DEV_OPENAI_TUNNEL=1)
+.\scripts\start_tunnel_client.ps1   # tunnel-client (läser nyckeln ur .env, skriver aldrig ut den)
+```
+
+Liveness/status: `http://127.0.0.1:8000/health` (JSON), `http://127.0.0.1:8000/status` (HTML). Ingen av dem läser mail/kalender eller exponerar tokens/secrets. Scripten skapar aldrig `.env` och committar inget.
+
 ## Commits och PR
 
 - Committa **endast** när användaren ber om det

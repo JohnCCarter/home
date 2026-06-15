@@ -14,7 +14,7 @@ Senast uppdaterad: 2026-06-15 (final hem-resume — uv + OpenAI Tunnel)
 **Verifierat på utvecklingsmaskin:**
 
 - `uv lock --check` — OK
-- `uv run pytest -q` — 77 passed
+- `uv run pytest -q` — 102 passed
 - `tunnel-client doctor` — API key OK, tunnel ID OK, MCP connection OK
 - `tunnel-client run` — `ready`
 - OAuth metadata-varning i doctor är **förväntad** — ChatGPT-connector använder **No auth**
@@ -55,7 +55,7 @@ uv sync --group dev
 uv run pytest -q
 ```
 
-Förväntat: **77 passed**.
+Förväntat: **102 passed** (siffran växer med nya tester — kontrollera mot senaste commit).
 
 ### Lokal miljö hemma (ej i git)
 
@@ -74,7 +74,19 @@ Förväntat: **77 passed**.
 
 ## Startkommandon hemma
 
-Öppna **tre terminaler**. Git Bash: använd `export`. PowerShell: använd `$env:`.
+**Enklast (PowerShell scripts)** — ett script per terminal:
+
+```powershell
+.\scripts\start_rest.ps1            # Terminal 1 — REST/OAuth :8000
+.\scripts\start_mcp.ps1             # Terminal 2 — MCP HTTP :8001 (sätter MCP_DEV_OPENAI_TUNNEL=1)
+.\scripts\start_tunnel_client.ps1   # Terminal 3 — tunnel-client (läser nyckeln ur .env, skriver aldrig ut den)
+```
+
+`start_tunnel_client.ps1` läser `CONTROL_PLANE_API_KEY` ur lokal `.env`, skapar inte `.env`, committar inget, och kräver att `tools\tunnel-client\` finns (gitignored).
+
+Statussidor under körning: `http://127.0.0.1:8000/health` (JSON), `http://127.0.0.1:8000/status` (HTML), `http://127.0.0.1:8080/ui` (tunnel admin).
+
+**Manuellt** — öppna **tre terminaler**. Git Bash: använd `export`. PowerShell: använd `$env:`.
 
 ### Terminal 1 — REST / backend
 
@@ -227,7 +239,7 @@ Att klistra in `<din nyckel>` ordagrant → `401 Unauthorized` i control-plane-p
 
 ```text
 Kommando: uv lock --check && uv run pytest -q
-Resultat: lock OK, 77 passed
+Resultat: lock OK, 102 passed
 Graph: read-only via tools + MCP (stdio + HTTP)
 Tunnel: Home Agent ready (tunnel-client + MCP :8001)
 Datum: 2026-06-15

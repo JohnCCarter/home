@@ -26,6 +26,29 @@ cp .env.example .env        # fyll i dina Azure-värden lokalt
 
 ## Lokal körning
 
+### Snabbstart (PowerShell scripts)
+
+Tre terminaler — ett script var (startar REST, MCP, tunnel-client):
+
+```powershell
+# Terminal 1 — REST / OAuth (:8000)
+.\scripts\start_rest.ps1
+
+# Terminal 2 — MCP HTTP (:8001, OpenAI tunnel dev-mode)
+.\scripts\start_mcp.ps1
+
+# Terminal 3 — tunnel-client (läser CONTROL_PLANE_API_KEY ur lokal .env, skrivs aldrig ut)
+.\scripts\start_tunnel_client.ps1
+```
+
+Status under körning:
+
+| URL | Vad |
+|-----|-----|
+| `http://127.0.0.1:8000/health` | JSON liveness (ingen login, inga secrets) |
+| `http://127.0.0.1:8000/status` | HTML-statussida (endpoints + tools) |
+| `http://127.0.0.1:8080/ui` | tunnel-client admin UI |
+
 ### FastAPI (REST + OAuth)
 
 ```bash
@@ -34,6 +57,8 @@ uv run uvicorn app.main:app --reload --port 8000
 
 | Endpoint | Beskrivning |
 |----------|-------------|
+| `GET /health` | Liveness-JSON (`ok`, `mode: read-only`, tools) — ingen login |
+| `GET /status` | HTML-statussida (endpoints, tools) — inga secrets |
 | `GET /calendar` | Kalenderhändelser (mock eller Outlook) |
 | `GET /mail` | Senaste inkorgsmeddelanden |
 | `GET /auth/microsoft/login` | Starta Microsoft-inloggning |

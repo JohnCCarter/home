@@ -4,12 +4,24 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
 from app.auth.microsoft import router as microsoft_auth_router
+from app.mcp.schemas import (
+    MCP_HTTP_DEFAULT_HOST,
+    MCP_HTTP_DEFAULT_PORT,
+    MCP_STREAMABLE_HTTP_PATH,
+    READ_ONLY_TOOL_NAMES,
+)
 from app.tools import http_status_for_error, read_calendar, read_email, read_recent_emails
 from app.tools.contracts import ToolResult
 from app.web_ui import BASE_STYLES, NARROW_MAIN_STYLES
 
 app = FastAPI(title="genesis-core-home-agent")
 app.include_router(microsoft_auth_router)
+
+# Static runtime facts surfaced by /health and /status. These never touch the
+# mailbox, calendar, tokens, or secrets — they only show that the app is alive
+# and which read-only tools it exposes.
+MCP_ENDPOINT = f"http://{MCP_HTTP_DEFAULT_HOST}:{MCP_HTTP_DEFAULT_PORT}{MCP_STREAMABLE_HTTP_PATH}"
+TUNNEL_ADMIN_UI = "http://127.0.0.1:8080/ui"
 
 
 def _wants_html(request: Request) -> bool:
@@ -93,6 +105,57 @@ def _handle_tool_result(result: ToolResult, request: Request, html_title: str):
         return _error_page(html_title, message, status_code=status)
 
     _raise_from_tool_result(result)
+
+
+@app.get("/health")
+async def get_health() -> dict:
+    """Liveness probe. No mailbox/calendar access, no tokens, no login required."""
+    return {
+        "ok": True,
+        "service": "home-agent",
+        "mode": "read-only",
+        "tools": list(READ_ONLY_TOOL_NAMES),
+    }
+
+
+@app.get("/status", response_class=HTMLResponse)
+async def get_status() -> HTMLResponse:
+    """Declarative runtime status page. Shows endpoints and tools only — never
+    tokens, secrets, mail, or calendar content. Does not probe liveness of the
+    MCP server or tunnel client (that would add failure modes out of scope)."""
+    from html import escape
+
+    tool_items = "".join(f"<li><code>{escape(name)}</code></li>" for name in READ_ONLY_TOOL_NAMES)
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="color-scheme" content="dark" />
+  <title>Home Agent — status</title>
+  <style>
+    {BASE_STYLES}
+    {NARROW_MAIN_STYLES}
+    dt {{ color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; }}
+    dd {{ margin: 0.2rem 0 0.9rem; }}
+    code {{ background: var(--surface-2); padding: 0.1rem 0.35rem; border-radius: 0.3rem; }}
+    ul {{ margin: 0.2rem 0 0; padding-left: 1.2rem; }}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Home Agent</h1>
+    <dl>
+      <dt>REST backend</dt><dd>running</dd>
+      <dt>Mode</dt><dd>read-only</dd>
+      <dt>MCP endpoint</dt><dd><code>{escape(MCP_ENDPOINT)}</code></dd>
+      <dt>Tunnel client admin UI</dt><dd><code>{escape(TUNNEL_ADMIN_UI)}</code></dd>
+      <dt>Tools</dt><dd><ul>{tool_items}</ul></dd>
+    </dl>
+    <p class="nav"><a href="/health">/health</a> · <a href="/calendar">Calendar</a> · <a href="/mail">Mail</a></p>
+  </main>
+</body>
+</html>"""
+    return HTMLResponse(content=html)
 
 
 @app.get("/calendar")
