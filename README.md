@@ -50,6 +50,19 @@ PYTHONPATH=. python -m app.mcp.server
 PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 ```
 
+**Tunnel-test (dev only, ej production):** DNS rebinding-skydd tillåter endast localhost som default. För HTTPS-tunnel, sätt explicit tillåten tunnel-host:
+
+```bash
+# Exempel: temporär tunnel-domän från localhost.run / ngrok / cloudflared
+export MCP_DEV_ALLOWED_HOSTS=your-tunnel-host.example.com
+PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001
+
+# Alternativ: CLI-flagga (samma dev-only semantik)
+PYTHONPATH=. python -m app.mcp.http_server --dev-allowed-host your-tunnel-host.example.com
+```
+
+MCP connector URL: `https://<tunnel-host>/mcp` — exponera **endast** port 8001, inte REST/OAuth på 8000.
+
 | | |
 |---|---|
 | MCP endpoint | `http://127.0.0.1:8001/mcp` |

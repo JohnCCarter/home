@@ -40,7 +40,8 @@ home/
 │   │   ├── bridge.py        # MCP → app/tools (ingen provider-access)
 │   │   ├── schemas.py       # Tool metadata
 │   │   ├── server.py        # FastMCP stdio-server
-│   │   └── http_server.py   # FastMCP streamable HTTP-server
+│   │   ├── http_server.py   # FastMCP streamable HTTP-server
+│   │   └── transport_config.py  # Dev-only tunnel allowed hosts
 │   └── providers/
 │       ├── base.py
 │       ├── mock_provider.py
@@ -74,8 +75,9 @@ home/
 - **Stdio transport:** `PYTHONPATH=. python -m app.mcp.server` — lokala MCP-klienter (Cursor, Claude Desktop)
 - **HTTP transport (streamable):** `PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001`
   - Endpoint: `http://127.0.0.1:8001/mcp` (FastMCP default `streamable_http_path`)
+- **Dev-only tunnel hosts:** `MCP_DEV_ALLOWED_HOSTS` eller `--dev-allowed-host` (explicit opt-in; DNS rebinding förblir på)
 - Båda transporterna delar samma `mcp`-instans, tools och `bridge.py`
-- **Nästa steg:** tunnel/HTTPS + ChatGPT developer mode-test
+- **Nästa steg:** manuell ChatGPT developer mode-test via tunnel/HTTPS
 
 ### `app/main.py`
 

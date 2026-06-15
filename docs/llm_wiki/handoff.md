@@ -1,10 +1,10 @@
 # Handoff
 
-Senast uppdaterad: 2026-06-15 (`app/mcp/http_server.py` HTTP transport)
+Senast uppdaterad: 2026-06-15 (dev tunnel hosts + read_email not_found)
 
 ## Aktuell status
 
-**Read-only MVP** med Graph E2E, token refresh, `read_email`, **`app/tools/`**, och **MCP** med både stdio och HTTP/streamable transport.
+**Read-only MVP** med Graph E2E, token refresh, `read_email`, **`app/tools/`**, **MCP** (stdio + HTTP), och **dev-only tunnel host config**.
 
 ## Klart
 
@@ -16,6 +16,8 @@ Senast uppdaterad: 2026-06-15 (`app/mcp/http_server.py` HTTP transport)
 - [x] Endpoints → tools → providers → Graph/mock
 - [x] **`app/mcp/`** — MCP stdio-server (FastMCP), endast read-only tools
 - [x] **`app/mcp/http_server.py`** — streamable HTTP-transport på `/mcp`
+- [x] **Dev-only tunnel hosts** — `MCP_DEV_ALLOWED_HOSTS` / `--dev-allowed-host`
+- [x] **`read_email` not_found** — Graph 400/404 → `not_found` via tools/MCP
 - [x] MCP → `app/tools/` → providers (ingen direkt provider-access)
 - [x] Skriv-actions disabled; read-only scopes endast
 - [x] Tester (inkl. tool-kontrakt, MCP stdio och HTTP)
@@ -31,7 +33,7 @@ Fortfarande **avstängda**:
 
 ## Nästa steg
 
-1. **Tunnel/HTTPS + ChatGPT developer mode-test** — exponera `http://127.0.0.1:8001/mcp` via HTTPS (ngrok/Cloudflare e.d., ej i repo)
+1. **Manuell ChatGPT developer mode-test** — tunnel/HTTPS mot `/mcp` med `MCP_DEV_ALLOWED_HOSTS` satt
 2. **`app/safety/`** — bekräftelse för write-actions (senare)
 3. Google provider
 4. Wake-word-sidecar
@@ -52,14 +54,23 @@ För lokala MCP-klienter (Cursor, Claude Desktop). Stdio-transport.
 PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 ```
 
+**Tunnel-test (dev only):**
+
+```bash
+export MCP_DEV_ALLOWED_HOSTS=<temporary-tunnel-host>
+PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001
+# eller: --dev-allowed-host <temporary-tunnel-host>
+```
+
 | | |
 |---|---|
-| **Endpoint** | `http://127.0.0.1:8001/mcp` |
+| **Endpoint** | `http://127.0.0.1:8001/mcp` (via tunnel: `https://<host>/mcp`) |
 | **Transport** | FastMCP `streamable-http` |
 | **Tools** | `read_calendar`, `read_recent_emails`, `read_email` |
 | **Auth** | Samma token-store som REST (`/auth/microsoft/login` på port 8000) |
+| **Tunnel** | Exponera endast port **8001**; ingen permanent tunnel-config i repo |
 
-ChatGPT App/Connector kräver HTTPS — nästa steg är tunnel mot HTTP-endpointen ovan, inte ny OAuth.
+DNS rebinding-skydd är **på** som default (localhost only). Tunnel-host kräver explicit `MCP_DEV_ALLOWED_HOSTS` — inte production-config.
 
 ## Senaste verifiering
 

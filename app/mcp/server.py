@@ -4,6 +4,7 @@ from mcp.server.fastmcp import FastMCP
 
 from app.mcp.bridge import invoke_read_calendar, invoke_read_email, invoke_read_recent_emails
 from app.mcp.schemas import MCP_HTTP_DEFAULT_PORT, MCP_STREAMABLE_HTTP_PATH, TOOL_DESCRIPTIONS
+from app.mcp.transport_config import apply_mcp_transport_security
 
 mcp = FastMCP(
     "Home Agent",
@@ -11,6 +12,8 @@ mcp = FastMCP(
     port=MCP_HTTP_DEFAULT_PORT,
     streamable_http_path=MCP_STREAMABLE_HTTP_PATH,
 )
+
+apply_mcp_transport_security(mcp, bind_host="127.0.0.1")
 
 
 @mcp.tool(name="read_calendar", description=TOOL_DESCRIPTIONS["read_calendar"])

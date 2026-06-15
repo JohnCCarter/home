@@ -74,3 +74,10 @@ def map_graph_error(exc: GraphApiError) -> ToolError:
     if exc.status_code >= 500:
         return ToolError("provider_error", exc.message, retryable=True)
     return ToolError("unknown_error", exc.message, retryable=False)
+
+
+def map_read_email_graph_error(exc: GraphApiError) -> ToolError:
+    """Map Graph errors for single-message reads (404 and malformed-id 400 → not_found)."""
+    if exc.status_code in (400, 404):
+        return ToolError("not_found", exc.message, retryable=False)
+    return map_graph_error(exc)

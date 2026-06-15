@@ -1,5 +1,12 @@
 from app.providers.outlook_provider import GraphApiError
-from app.tools.contracts import ToolError, ToolResult, map_graph_error, tool_failure, tool_success
+from app.tools.contracts import (
+    ToolError,
+    ToolResult,
+    map_graph_error,
+    map_read_email_graph_error,
+    tool_failure,
+    tool_success,
+)
 from app.tools.deps import AuthRequiredError, get_provider_with_name
 from app.tools.serialization import serialize_email_detail, serialize_email_messages
 
@@ -44,4 +51,4 @@ async def read_email(message_id: str) -> ToolResult:
             map_graph_error(GraphApiError(401, exc.message)),
         )
     except GraphApiError as exc:
-        return tool_failure(tool, provider_name, map_graph_error(exc))
+        return tool_failure(tool, provider_name, map_read_email_graph_error(exc))

@@ -100,6 +100,25 @@ async def test_provider_403_maps_to_permission_denied(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_provider_400_on_read_email_maps_to_not_found(monkeypatch):
+    provider = MockProvider()
+
+    async def fake_get_provider():
+        return provider, "mock"
+
+    async def fake_read_email(self, message_id: str):
+        raise GraphApiError(400, "Email message not found.")
+
+    monkeypatch.setattr("app.tools.email_tools.get_provider_with_name", fake_get_provider)
+    monkeypatch.setattr(MockProvider, "read_email", fake_read_email)
+
+    result = await read_email("nonexistent-id")
+
+    assert result.ok is False
+    assert result.error.code == "not_found"
+
+
+@pytest.mark.asyncio
 async def test_provider_404_maps_to_not_found(monkeypatch):
     provider = MockProvider()
 

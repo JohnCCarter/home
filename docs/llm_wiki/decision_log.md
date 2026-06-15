@@ -4,6 +4,16 @@ Enkel logg över arkitektur- och scope-beslut. Nyaste överst.
 
 ---
 
+## 2026-06-15 — Dev-only MCP tunnel hosts + read_email not_found
+
+**Beslut:** Lägg till `app/mcp/transport_config.py` med `MCP_DEV_ALLOWED_HOSTS` (explicit opt-in); mappa Graph 400/404 på `read_email` till `not_found`.
+
+**Motivering:** Tunnel-test krävde runtime-inaktivering av DNS rebinding; säkrare att tillåta specifika tunnel-hosts. Graph returnerar 400 för ogiltigt message id — ska inte bli `unknown_error` i MCP.
+
+**Konsekvens:** Default förblir localhost-only med DNS rebinding på. Nästa steg: manuell ChatGPT developer mode-test.
+
+---
+
 ## 2026-06-15 — MCP HTTP/streamable transport för ChatGPT-förberedelse
 
 **Beslut:** Lägg till `app/mcp/http_server.py` med FastMCP `streamable-http` transport på `/mcp`; behåll stdio-server oförändrad som separat väg.
