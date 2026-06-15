@@ -1,9 +1,11 @@
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.auth import microsoft
+from app.auth.token_store import is_token_expired
 from app.main import app
 
 
@@ -66,3 +68,36 @@ def test_tokens_never_returned_or_logged(monkeypatch, caplog):
     assert "super-secret-access" not in all_logs
     assert "super-secret-refresh" not in all_logs
     assert "secret" not in all_logs
+
+
+# --- is_token_expired edge-case tests ---
+
+
+def test_is_token_expired_z_suffix_future():
+    future = (datetime.now(timezone.utc) + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert not is_token_expired({"expires_at": future})
+
+
+def test_is_token_expired_z_suffix_past():
+    past = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert is_token_expired({"expires_at": past})
+
+
+def test_is_token_expired_invalid_timestamp():
+    assert is_token_expired({"expires_at": "not-a-timestamp"})
+
+
+def test_is_token_expired_missing_key():
+    assert is_token_expired({})
+
+
+def test_is_token_expired_within_buffer():
+    # expires in 30s, inside the 60s buffer → should count as expired
+    near = (datetime.now(timezone.utc) + timedelta(seconds=30)).isoformat()
+    assert is_token_expired({"expires_at": near})
+
+
+def test_is_token_expired_outside_buffer():
+    # expires in 90s, outside the 60s buffer → not expired
+    outside = (datetime.now(timezone.utc) + timedelta(seconds=90)).isoformat()
+    assert not is_token_expired({"expires_at": outside})

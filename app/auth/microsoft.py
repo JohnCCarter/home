@@ -3,7 +3,7 @@ import hashlib
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 from urllib.parse import urlencode
 
 import httpx
@@ -16,7 +16,11 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth/microsoft", tags=["auth"])
-_pending_states: Dict[str, str] = {}
+
+_MAX_PENDING_STATES = 1000
+_STATE_TTL_SECONDS = 600
+
+_pending_states: Dict[str, tuple[str, datetime]] = {}
 
 
 def _base64url(value: bytes) -> str:
@@ -48,7 +52,7 @@ def _build_authorization_url(state: str, code_challenge: str) -> str:
     )
 
 
-async def _exchange_code_for_tokens(code: str, code_verifier: str) -> Dict[str, str]:
+async def _exchange_code_for_tokens(code: str, code_verifier: str) -> Dict[str, Any]:
     settings = get_settings()
     token_url = f"https://login.microsoftonline.com/{settings.azure_tenant_id}/oauth2/v2.0/token"
     payload = {
@@ -73,11 +77,25 @@ async def _exchange_code_for_tokens(code: str, code_verifier: str) -> Dict[str, 
     return token_data
 
 
+def _purge_expired_states() -> None:
+    now = datetime.now(timezone.utc)
+    expired = [
+        s
+        for s, (_, created_at) in _pending_states.items()
+        if (now - created_at).total_seconds() > _STATE_TTL_SECONDS
+    ]
+    for s in expired:
+        del _pending_states[s]
+
+
 @router.get("/login")
 async def microsoft_login() -> RedirectResponse:
+    _purge_expired_states()
+    if len(_pending_states) >= _MAX_PENDING_STATES:
+        raise HTTPException(status_code=429, detail="Too many pending auth requests")
     state = secrets.token_urlsafe(16)
     code_verifier, code_challenge = _generate_pkce_pair()
-    _pending_states[state] = code_verifier
+    _pending_states[state] = (code_verifier, datetime.now(timezone.utc))
 
     return RedirectResponse(url=_build_authorization_url(state, code_challenge), status_code=307)
 
@@ -89,7 +107,7 @@ async def microsoft_callback(code: Optional[str] = None, state: Optional[str] = 
     if not code:
         raise HTTPException(status_code=400, detail="Missing authorization code")
 
-    code_verifier = _pending_states.pop(state)
+    code_verifier, _ = _pending_states.pop(state)
 
     try:
         token_data = await _exchange_code_for_tokens(code, code_verifier)

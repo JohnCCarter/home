@@ -18,6 +18,7 @@ def _normalize_tokens(tokens: Dict[str, Any]) -> Dict[str, Any]:
 
 def save_tokens(tokens: Dict[str, Any]) -> None:
     TOKEN_STORE_PATH.write_text(json.dumps(_normalize_tokens(tokens), indent=2), encoding="utf-8")
+    TOKEN_STORE_PATH.chmod(0o600)
 
 
 def load_tokens() -> Optional[Dict[str, Any]]:
@@ -35,12 +36,20 @@ def clear_tokens() -> None:
         TOKEN_STORE_PATH.unlink()
 
 
+def has_stored_tokens() -> bool:
+    return TOKEN_STORE_PATH.exists()
+
+
 def is_token_expired(tokens: Dict[str, Any]) -> bool:
     expires_at_raw = tokens.get("expires_at")
     if not expires_at_raw:
         return True
 
-    expires_at = datetime.fromisoformat(expires_at_raw)
+    try:
+        expires_at = datetime.fromisoformat(str(expires_at_raw).replace("Z", "+00:00"))
+    except ValueError:
+        return True
+
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
 

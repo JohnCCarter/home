@@ -31,12 +31,16 @@ class OutlookProvider(CalendarProvider, EmailProvider):
         events: List[CalendarEvent] = []
 
         for item in payload.get("value", []):
+            start_raw = (item.get("start") or {}).get("dateTime")
+            end_raw = (item.get("end") or {}).get("dateTime")
+            if not start_raw or not end_raw:
+                continue
             events.append(
                 CalendarEvent(
                     id=item.get("id", ""),
                     subject=item.get("subject", ""),
-                    start=datetime.fromisoformat(item["start"]["dateTime"].replace("Z", "+00:00")),
-                    end=datetime.fromisoformat(item["end"]["dateTime"].replace("Z", "+00:00")),
+                    start=datetime.fromisoformat(start_raw.replace("Z", "+00:00")),
+                    end=datetime.fromisoformat(end_raw.replace("Z", "+00:00")),
                 )
             )
 
@@ -47,14 +51,13 @@ class OutlookProvider(CalendarProvider, EmailProvider):
         messages: List[EmailMessage] = []
 
         for item in payload.get("value", []):
+            received_raw = item.get("receivedDateTime") or "1970-01-01T00:00:00Z"
             messages.append(
                 EmailMessage(
                     id=item.get("id", ""),
                     subject=item.get("subject", ""),
                     sender=item.get("from", {}).get("emailAddress", {}).get("address", ""),
-                    received_at=datetime.fromisoformat(
-                        item.get("receivedDateTime", "1970-01-01T00:00:00Z").replace("Z", "+00:00")
-                    ),
+                    received_at=datetime.fromisoformat(received_raw.replace("Z", "+00:00")),
                 )
             )
 
