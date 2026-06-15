@@ -84,6 +84,22 @@ Förväntat: **102 passed** (siffran växer med nya tester — kontrollera mot s
 
 `start_tunnel_client.ps1` läser `CONTROL_PLANE_API_KEY` ur lokal `.env`, skapar inte `.env`, committar inget, och kräver att `tools\tunnel-client\` finns (gitignored).
 
+**Tunnel-profil per dator** — scriptet tar `-Profile` (default `home-agent`):
+
+```powershell
+.\scripts\start_tunnel_client.ps1                          # hemdator (default: home-agent)
+.\scripts\start_tunnel_client.ps1 -Profile home-agent-work # jobbdator
+# eller: $env:TUNNEL_PROFILE="home-agent-work"; .\scripts\start_tunnel_client.ps1
+```
+
+Samma `.env`/`CONTROL_PLANE_API_KEY`/Azure-config på båda datorerna — endast tunnel-profil/tunnel-ID skiljer. Hemprofilen heter fortfarande `home-agent` (oförändrad). Skapa jobbprofilen en gång (tunnel-ID aldrig i git):
+
+```powershell
+cd tools\tunnel-client
+.\tunnel-client.exe init --profile home-agent-work --tunnel-id <work-computer-tunnel-id> --mcp-server-url http://127.0.0.1:8001/mcp --force
+.\tunnel-client.exe doctor --profile home-agent-work --explain
+```
+
 Statussidor under körning: `http://127.0.0.1:8000/health` (JSON), `http://127.0.0.1:8000/status` (HTML), `http://127.0.0.1:8080/ui` (tunnel admin).
 
 **Manuellt** — öppna **tre terminaler**. Git Bash: använd `export`. PowerShell: använd `$env:`.

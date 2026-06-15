@@ -57,6 +57,8 @@ Tre terminaler — ett script var:
 .\scripts\start_tunnel_client.ps1   # tunnel-client (läser nyckeln ur .env, skriver aldrig ut den)
 ```
 
+Tunnel-profil (en per dator) styrs av `-Profile` (default `home-agent`): jobbdatorn kör `.\scripts\start_tunnel_client.ps1 -Profile home-agent-work` (eller `$env:TUNNEL_PROFILE="home-agent-work"`). Samma repo/`.env`/nyckel/Azure-config på båda — endast tunnel-profil/tunnel-ID skiljer.
+
 Liveness/status: `http://127.0.0.1:8000/health` (JSON), `http://127.0.0.1:8000/status` (HTML). Ingen av dem läser mail/kalender eller exponerar tokens/secrets. Scripten skapar aldrig `.env` och committar inget.
 
 ## Commits och PR

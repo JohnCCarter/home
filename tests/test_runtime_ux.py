@@ -92,6 +92,22 @@ def test_tunnel_script_has_no_hardcoded_api_key():
     assert 'CONTROL_PLANE_API_KEY="sk' not in body
 
 
+def test_tunnel_script_is_profile_parametrized():
+    body = (SCRIPTS_DIR / "start_tunnel_client.ps1").read_text(encoding="utf-8")
+    # Accepts a -Profile parameter, falling back to the TUNNEL_PROFILE env var.
+    assert "param(" in body
+    assert "$Profile" in body
+    assert "$env:TUNNEL_PROFILE" in body
+    # Default preserves the original home behavior.
+    assert '$Profile = "home-agent"' in body
+    # Both doctor and run must use the variable, not a hardcoded profile.
+    assert "doctor --profile $Profile" in body
+    assert "run --profile $Profile" in body
+    # The profile must no longer be hardcoded as the only option.
+    assert "--profile home-agent " not in body
+    assert "--profile home-agent\n" not in body
+
+
 # --- write/delete tools must not be exposed ----------------------------------
 
 

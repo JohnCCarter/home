@@ -1,9 +1,22 @@
-# Start the OpenAI tunnel-client for the Home Agent (profile: home-agent).
+# Start the OpenAI tunnel-client for the Home Agent.
+#
+# Profile selection (one tunnel per physical computer):
+#   .\scripts\start_tunnel_client.ps1                          # default: home-agent (home)
+#   .\scripts\start_tunnel_client.ps1 -Profile home-agent-work # work computer
+#   $env:TUNNEL_PROFILE="home-agent-work"; .\scripts\start_tunnel_client.ps1
 #
 # Reads CONTROL_PLANE_API_KEY from the local, gitignored .env and exports it to
-# the environment for tunnel-client. The key is NEVER printed. This script does
-# not create .env, does not commit anything, and tools/tunnel-client/ stays
-# gitignored.
+# the environment for tunnel-client. The key is NEVER printed (the profile name
+# is not secret and is printed). This script does not create .env, does not
+# commit anything, and tools/tunnel-client/ stays gitignored.
+param(
+    [string]$Profile = $env:TUNNEL_PROFILE
+)
+
+if (-not $Profile) {
+    $Profile = "home-agent"
+}
+
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -34,10 +47,12 @@ if (-not $key) {
 
 $env:CONTROL_PLANE_API_KEY = $key
 
+Write-Host "Using tunnel profile: $Profile"
+
 Push-Location $tunnelDir
 try {
-    .\tunnel-client.exe doctor --profile home-agent --explain
-    .\tunnel-client.exe run --profile home-agent
+    .\tunnel-client.exe doctor --profile $Profile --explain
+    .\tunnel-client.exe run --profile $Profile
 }
 finally {
     Pop-Location

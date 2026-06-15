@@ -41,6 +41,23 @@ Tre terminaler — ett script var (startar REST, MCP, tunnel-client):
 .\scripts\start_tunnel_client.ps1
 ```
 
+**Tunnel-profil (en tunnel per dator)** — `start_tunnel_client.ps1` tar en `-Profile` (default `home-agent`):
+
+```powershell
+.\scripts\start_tunnel_client.ps1                          # hemdator (default: home-agent)
+.\scripts\start_tunnel_client.ps1 -Profile home-agent-work # jobbdator
+# alternativt via env-var:
+$env:TUNNEL_PROFILE="home-agent-work"; .\scripts\start_tunnel_client.ps1
+```
+
+Samma repo, `.env`, `CONTROL_PLANE_API_KEY` och Azure-config på båda datorerna — **enda skillnaden är tunnel-profil/tunnel-ID**. Saknas jobbprofilen, skapa den en gång (tunnel-ID läggs aldrig i git):
+
+```powershell
+cd tools\tunnel-client
+.\tunnel-client.exe init --profile home-agent-work --tunnel-id <work-computer-tunnel-id> --mcp-server-url http://127.0.0.1:8001/mcp --force
+.\tunnel-client.exe doctor --profile home-agent-work --explain
+```
+
 Status under körning:
 
 | URL | Vad |
