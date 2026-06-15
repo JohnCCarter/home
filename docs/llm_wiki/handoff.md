@@ -19,7 +19,7 @@ Senast uppdaterad: 2026-06-15 (final hem-resume — uv + OpenAI Tunnel)
 - `tunnel-client run` — `ready`
 - OAuth metadata-varning i doctor är **förväntad** — ChatGPT-connector använder **No auth**
 
-**Nästa manuella steg hemma:** ChatGPT UI-test (se nedan).
+**ChatGPT UI-test:** ✅ Verifierad 2026-06-15 — `read_recent_emails` returnerade riktig Outlook-inbox via hem-tunneln (`tunnel_6a3043a186388191a7bdf21720cab2d2`), end-to-end.
 
 ## Klart (repo)
 
@@ -131,11 +131,19 @@ $env:CONTROL_PLANE_API_KEY="<set locally; never commit>"
 .\tunnel-client.exe run --profile home-agent
 ```
 
-Profil `home-agent` lagras lokalt i `~/.config/tunnel-client/home-agent.yaml` (ej i repo). På ny maskin: `init` med tunnel-ID från [OpenAI Platform → Tunnels](https://platform.openai.com/settings/organization/tunnels) (**Home Agent**). Tunnel-ID måste vara `tunnel_` + exakt 32 tecken `a-z0-9`.
+Profil `home-agent` lagras lokalt i **`%APPDATA%\tunnel-client\home-agent.yaml`** (Windows; ej i repo) — **inte** `~/.config/...` (det är där Git Bash letar och misslyckas). **Starta därför tunnel-client från PowerShell, inte Git Bash.** Hemma använder en **egen** tunnel `tunnel_6a3043a186388191a7bdf21720cab2d2` (jobb och hem delar inte tunnel — se Felsökning nedan). På ny maskin: `init` med tunnel-ID från [OpenAI Platform → Tunnels](https://platform.openai.com/settings/organization/tunnels). Tunnel-ID måste vara `tunnel_` + exakt 32 tecken `a-z0-9`.
 
 ### Admin UI
 
 `http://127.0.0.1:8080/ui` — lokal status under körning.
+
+**Läsbar mörk UI (dev):** tunnel-client:s inbyggda UI har låg kontrast på vit bakgrund. Kör proxyn och öppna `:8082` istället:
+
+```bash
+uv run python tools/tunnel_ui_proxy.py
+```
+
+Öppna `http://127.0.0.1:8082/ui` (kräver att tunnel-client redan kör på `:8080`).
 
 ### ChatGPT
 
@@ -183,6 +191,31 @@ DNS rebinding-skydd är **på** som default (localhost only). `MCP_DEV_OPENAI_TU
 export MCP_DEV_ALLOWED_HOSTS=<temporary-tunnel-host>
 uv run python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 ```
+
+## Felsökning & lärdomar (2026-06-15, hemma)
+
+När Home Agent inte gick att nå från ChatGPT visade det sig vara tre separata orsaker:
+
+### 1. En tunnel = en aktiv tunnel-client
+En OpenAI-tunnel kan bara servas av **en** tunnel-client åt gången. Jobb- och hemdatorn delade samma tunnel (`tunnel_6a30000575…`, "Home Agent") på **samma konto** → anrop routades ibland till fel maskin (växlande `502` / `connection failed`).
+**Lösning:** två separata tunnlar, **en per maskin** (samma OpenAI-konto):
+
+| Maskin | Tunnel-ID | Connector i ChatGPT |
+|--------|-----------|---------------------|
+| Jobbdator | `tunnel_6a30000575ac8191926cb8e029ab4967` ("Home Agent") | egen — orörd, behålls för jobb |
+| Hemdator | `tunnel_6a3043a186388191a7bdf21720cab2d2` | egen — skapas för hemma |
+
+Varje maskin kör sin egen tunnel-client mot sin egen tunnel och har en egen connector i ChatGPT (connectorer är konto-globala men pekar var för sig). Kör aldrig två klienter mot **samma** tunnel-ID. Bara hemdatorns profil (`%APPDATA%\tunnel-client\home-agent.yaml`) ändrades; jobbdatorns är orörd.
+
+### 2. MCP-servern måste köra stateless
+ChatGPT/tunneln forwardar `tools/call` **utan** `mcp-session-id`. En stateful FastMCP-server svarar då `HTTP 400` ("Missing session ID") → `502` i ChatGPT. Tunnel-loggen visade `session_id=''` på alla fel.
+**Lösning:** `stateless_http=True` i `app/mcp/server.py` (på main, med regressionstest). Den Content-Type-middleware som först provades var en återvändsgränd och togs bort.
+
+### 3. CONTROL_PLANE_API_KEY får inte vara platshållaren
+Att klistra in `<din nyckel>` ordagrant → `401 Unauthorized` i control-plane-pollen → `502`. Nyckeln ligger i lokal `.env` (gitignorerad) — ladda den därifrån, klistra inte in den manuellt.
+
+### Ofarliga varningar
+`doctor` rödmarkerar `oauth_metadata` (404 på `/.well-known/oauth-protected-resource`) och `run` loggar "OAuth discovery failed: invalid character 'N'". Det är **förväntat** för en No-auth-server och blockerar ingenting.
 
 ## Nästa steg (efter ChatGPT-test)
 
