@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse
 from app.auth.microsoft import router as microsoft_auth_router
 from app.tools import http_status_for_error, read_calendar, read_email, read_recent_emails
 from app.tools.contracts import ToolResult
+from app.web_ui import BASE_STYLES, NARROW_MAIN_STYLES
 
 app = FastAPI(title="genesis-core-home-agent")
 app.include_router(microsoft_auth_router)
@@ -23,17 +24,20 @@ def _error_page(title: str, message: str, status_code: int = 500) -> HTMLRespons
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="color-scheme" content="dark" />
   <title>{escape(title)}</title>
   <style>
-    body {{ font-family: system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }}
-    h1 {{ color: #b45309; }}
-    a {{ color: #1d4ed8; }}
+    {BASE_STYLES}
+    {NARROW_MAIN_STYLES}
+    h1 {{ color: var(--warn); }}
   </style>
 </head>
 <body>
-  <h1>{escape(title)}</h1>
-  <p>{escape(message)}</p>
-  <p><a href="/auth/microsoft/login">Login again</a></p>
+  <main>
+    <h1>{escape(title)}</h1>
+    <p>{escape(message)}</p>
+    <p class="nav"><a href="/auth/microsoft/login">Login again</a></p>
+  </main>
 </body>
 </html>"""
     return HTMLResponse(content=html, status_code=status_code)
@@ -43,32 +47,29 @@ def _list_page(title: str, items: List[dict], columns: List[str]) -> HTMLRespons
     from html import escape
 
     if not items:
-        body = "<p>No items found.</p>"
+        body = '<p class="empty">No items found.</p>'
     else:
         headers = "".join(f"<th>{escape(column)}</th>" for column in columns)
         rows = []
         for item in items:
             cells = "".join(f"<td>{escape(str(item.get(column, '')))}</td>" for column in columns)
             rows.append(f"<tr>{cells}</tr>")
-        body = f"<table border=\"1\" cellpadding=\"8\" cellspacing=\"0\"><thead><tr>{headers}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
+        body = f"<table><thead><tr>{headers}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="color-scheme" content="dark" />
   <title>{escape(title)}</title>
-  <style>
-    body {{ font-family: system-ui, sans-serif; max-width: 56rem; margin: 2rem auto; padding: 0 1rem; }}
-    h1 {{ color: #0f766e; }}
-    table {{ border-collapse: collapse; width: 100%; }}
-    th {{ text-align: left; background: #f3f4f6; }}
-    a {{ color: #1d4ed8; }}
-  </style>
+  <style>{BASE_STYLES}</style>
 </head>
 <body>
-  <h1>{escape(title)}</h1>
-  {body}
-  <p><a href="/calendar">Calendar</a> · <a href="/mail">Mail</a> · <a href="/auth/microsoft/login">Login</a></p>
+  <main>
+    <h1>{escape(title)}</h1>
+    {body}
+    <p class="nav"><a href="/calendar">Calendar</a> · <a href="/mail">Mail</a> · <a href="/auth/microsoft/login">Login</a></p>
+  </main>
 </body>
 </html>"""
     return HTMLResponse(content=html)

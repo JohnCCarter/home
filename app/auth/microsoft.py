@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.auth import token_store
 from app.config import get_settings
+from app.web_ui import BASE_STYLES, NARROW_MAIN_STYLES
 
 logger = logging.getLogger(__name__)
 
@@ -38,27 +39,29 @@ class TokenRefreshError(Exception):
 
 
 def _callback_page(success: bool, title: str, message: str, status_code: int = 200) -> HTMLResponse:
-    color = "#0f766e" if success else "#b45309"
     extra = (
-        "<p><a href=\"/calendar\">/calendar</a> · <a href=\"/mail\">/mail</a></p>"
+        '<p class="nav"><a href="/calendar">/calendar</a> · <a href="/mail">/mail</a></p>'
         if success
-        else "<p><a href=\"/auth/microsoft/login\">Try login again</a></p>"
+        else '<p class="nav"><a href="/auth/microsoft/login">Try login again</a></p>'
     )
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="color-scheme" content="dark" />
   <title>{title}</title>
   <style>
-    body {{ font-family: system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }}
-    h1 {{ color: {color}; }}
-    a {{ color: #1d4ed8; }}
+    {BASE_STYLES}
+    {NARROW_MAIN_STYLES}
+    h1 {{ color: {"var(--accent)" if success else "var(--warn)"}; }}
   </style>
 </head>
 <body>
-  <h1>{title}</h1>
-  <p>{message}</p>
-  {extra}
+  <main>
+    <h1>{title}</h1>
+    <p>{message}</p>
+    {extra}
+  </main>
 </body>
 </html>"""
     return HTMLResponse(content=html, status_code=status_code)
