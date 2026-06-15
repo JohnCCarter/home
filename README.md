@@ -1,1 +1,66 @@
-# home
+# Home Agent
+
+Personlig kalender- och mail-agent med **Microsoft Graph (Outlook)** i första fasen, och planerat stöd för Google samt klienter som ChatGPT App, MCP och eventuell röst-sidecar.
+
+Detta repo är **inte** Fibonacci eller Genesis-Core-V2.
+
+## Funktioner (MVP)
+
+- Read-only kalender och inkorg via Microsoft Graph
+- OAuth 2.0 med PKCE (`/auth/microsoft/login`)
+- `MockProvider` när ingen token finns (lokal utveckling utan Azure)
+- Skriv-actions medvetet disabled tills safety-lager finns
+
+## Installation
+
+```bash
+git clone <repo-url>
+cd home
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env        # fyll i dina Azure-värden lokalt
+```
+
+## Lokal körning
+
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+| Endpoint | Beskrivning |
+|----------|-------------|
+| `GET /calendar` | Kalenderhändelser (mock eller Outlook) |
+| `GET /mail` | Senaste inkorgsmeddelanden |
+| `GET /auth/microsoft/login` | Starta Microsoft-inloggning |
+
+Utan inloggning används mock-data. Efter OAuth sparas tokens i `token_store.json` (gitignored).
+
+## Tester
+
+```bash
+PYTHONPATH=. pytest -q
+```
+
+Tester kräver inte riktiga Microsoft-credentials. Se [docs/llm_wiki/testing.md](docs/llm_wiki/testing.md).
+
+## Konfiguration
+
+Kopiera `.env.example` till `.env`. Placeholders — lägg aldrig riktiga secrets i git.
+
+## Dokumentation för AI-agenter
+
+**[docs/llm_wiki/index.md](docs/llm_wiki/index.md)** — LLM Wiki med arkitektur, safety, tools och handoff.
+
+Korta agentregler: **[AGENTS.md](AGENTS.md)**
+
+## Projektstruktur
+
+```text
+app/
+  auth/         Microsoft OAuth, token store
+  providers/    Mock + Outlook (Graph)
+  main.py       FastAPI routes
+tests/
+docs/llm_wiki/  Agent-wiki
+```
