@@ -22,6 +22,8 @@ uv sync --group dev
 cp .env.example .env        # fyll i dina Azure-värden lokalt
 ```
 
+**Fortsätt hemma** efter `git pull`: se **[docs/llm_wiki/handoff.md](docs/llm_wiki/handoff.md)** — `uv sync --group dev`, tre terminaler (REST, MCP, tunnel-client). `.env`, `token_store.json` och `tools/tunnel-client/` finns inte i git.
+
 ## Lokal körning
 
 ### FastAPI (REST + OAuth)

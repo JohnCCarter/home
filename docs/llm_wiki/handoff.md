@@ -1,23 +1,25 @@
 # Handoff
 
-Senast uppdaterad: 2026-06-15 (OpenAI Secure MCP Tunnel runtime)
+Senast uppdaterad: 2026-06-15 (final hem-resume — uv + OpenAI Tunnel)
 
 ## Aktuell status (runtime)
 
 | Tjänst | Port / URL | Status |
 |--------|------------|--------|
-| REST / OAuth (FastAPI) | `http://127.0.0.1:8000` | Kör lokalt |
-| MCP HTTP (streamable) | `http://127.0.0.1:8001/mcp` | Kör lokalt |
+| REST / OAuth (FastAPI) | `http://127.0.0.1:8000` | Verifierad lokalt |
+| MCP HTTP (streamable) | `http://127.0.0.1:8001/mcp` | Verifierad lokalt |
 | tunnel-client admin UI | `http://127.0.0.1:8080/ui` | `ready` efter `run` |
 | OpenAI Platform tunnel | **Home Agent** | Registrerad via tunnel-client |
 
 **Verifierat på utvecklingsmaskin:**
 
+- `uv lock --check` — OK
+- `uv run pytest -q` — 77 passed
 - `tunnel-client doctor` — API key OK, tunnel ID OK, MCP connection OK
 - `tunnel-client run` — `ready`
 - OAuth metadata-varning i doctor är **förväntad** — ChatGPT-connector använder **No auth**
 
-**Nästa manuella steg:** ChatGPT UI-test (se nedan).
+**Nästa manuella steg hemma:** ChatGPT UI-test (se nedan).
 
 ## Klart (repo)
 
@@ -33,7 +35,7 @@ Senast uppdaterad: 2026-06-15 (OpenAI Secure MCP Tunnel runtime)
 - [x] MCP → `app/tools/` → providers (ingen direkt provider-access)
 - [x] Skriv-actions disabled; read-only scopes endast
 - [x] Tester (tool-kontrakt, MCP stdio och HTTP)
-- [x] **uv-pakethantering** — `pyproject.toml` + `uv.lock` (source of truth)
+- [x] **uv-pakethantering** — `pyproject.toml` + `uv.lock` (source of truth; `requirements.txt` borttagen)
 
 ## Write-actions
 
@@ -43,13 +45,38 @@ Fortfarande **avstängda**:
 - Inga `Mail.Send`, `Mail.ReadWrite`, `Calendars.ReadWrite`
 - Inga delete/move/reply/forward
 
-## Fortsätt hemma — snabbstart
+---
 
-Öppna **tre terminaler** (Git Bash rekommenderas på Windows). Använd `export` — inte PowerShell `$env:` i Git Bash.
+## Fortsätt hemma — resume från ren clone/pull
 
-Första gången: `uv sync --group dev` från repo-roten.
+```bash
+git pull
+uv sync --group dev
+uv run pytest -q
+```
 
-### Terminal 1 — Backend (REST + OAuth)
+Förväntat: **77 passed**.
+
+### Lokal miljö hemma (ej i git)
+
+| Fil / mapp | I git? | Åtgärd hemma |
+|------------|--------|--------------|
+| `.env` | **Nej** | Kopiera från `.env.example`, fyll i Azure-värden |
+| `token_store.json` | **Nej** | Skapas efter Microsoft OAuth |
+| `CONTROL_PLANE_API_KEY` | **Nej** | Sätt lokalt i terminal eller lokal `.env` — aldrig i docs/chat/git |
+| `tools/tunnel-client/` | **Nej** | Ladda ner binary (se Terminal 3) |
+
+**Microsoft-auth:** Om token saknas, öppna `http://localhost:8000/auth/microsoft/login` efter REST startat.
+
+**OpenAI API key:** Sätt `CONTROL_PLANE_API_KEY` lokalt i terminal eller lokal `.env` — aldrig i docs, chat eller git.
+
+---
+
+## Startkommandon hemma
+
+Öppna **tre terminaler**. Git Bash: använd `export`. PowerShell: använd `$env:`.
+
+### Terminal 1 — REST / backend
 
 ```bash
 cd <repo-root>
@@ -58,9 +85,19 @@ uv run uvicorn app.main:app --port 8000
 
 ### Terminal 2 — MCP HTTP
 
+**bash / Git Bash:**
+
 ```bash
 cd <repo-root>
 export MCP_DEV_OPENAI_TUNNEL=1
+uv run python -m app.mcp.http_server --host 127.0.0.1 --port 8001
+```
+
+**PowerShell:**
+
+```powershell
+cd <repo-root>
+$env:MCP_DEV_OPENAI_TUNNEL="1"
 uv run python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 ```
 
@@ -68,24 +105,39 @@ uv run python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 |---|---|
 | **Endpoint** | `http://127.0.0.1:8001/mcp` |
 | **Tools** | `read_calendar`, `read_recent_emails`, `read_email` |
-| **Microsoft-auth** | Via REST: `http://localhost:8000/auth/microsoft/login` |
+| **Microsoft-auth** | `http://localhost:8000/auth/microsoft/login` |
 
 ### Terminal 3 — tunnel-client
 
-`tools/tunnel-client/` är **gitignored** — ladda ner igen på hemdatorn om mappen saknas:
+`tools/tunnel-client/` är **gitignored** — ladda ner på hemdatorn om mappen saknas:
 
 - [tunnel-client v0.0.9 windows-amd64](https://github.com/openai/tunnel-client/releases/tag/v0.0.9--context-conduit-topaz)
 
+**bash / Git Bash:**
+
 ```bash
 cd <repo-root>/tools/tunnel-client
-export CONTROL_PLANE_API_KEY="<set locally; do not commit>"
+export CONTROL_PLANE_API_KEY="<set locally; never commit>"
 ./tunnel-client.exe doctor --profile home-agent --explain
 ./tunnel-client.exe run --profile home-agent
 ```
 
+**PowerShell:**
+
+```powershell
+cd <repo-root>\tools\tunnel-client
+$env:CONTROL_PLANE_API_KEY="<set locally; never commit>"
+.\tunnel-client.exe doctor --profile home-agent --explain
+.\tunnel-client.exe run --profile home-agent
+```
+
 Profil `home-agent` lagras lokalt i `~/.config/tunnel-client/home-agent.yaml` (ej i repo). På ny maskin: `init` med tunnel-ID från [OpenAI Platform → Tunnels](https://platform.openai.com/settings/organization/tunnels) (**Home Agent**). Tunnel-ID måste vara `tunnel_` + exakt 32 tecken `a-z0-9`.
 
-### ChatGPT UI
+### Admin UI
+
+`http://127.0.0.1:8080/ui` — lokal status under körning.
+
+### ChatGPT
 
 1. [ChatGPT → Connectors](https://chatgpt.com/#settings/Connectors)
 2. **Developer mode** → **New App** → **Tunnel**
@@ -93,7 +145,7 @@ Profil `home-agent` lagras lokalt i `~/.config/tunnel-client/home-agent.yaml` (e
 4. Verifiera tools: `read_calendar`, `read_recent_emails`, `read_email`
 5. Testa t.ex. *"Vad har jag i kalendern imorgon?"*
 
-Lokal status under körning: `http://127.0.0.1:8080/ui`
+---
 
 ## Secrets — aldrig i git eller docs
 
@@ -141,8 +193,10 @@ uv run python -m app.mcp.http_server --host 127.0.0.1 --port 8001
 ## Senaste verifiering
 
 ```text
-Kommando: uv run pytest -q
-Resultat: 77 passed
+Kommando: uv lock --check && uv run pytest -q
+Resultat: lock OK, 77 passed
 Graph: read-only via tools + MCP (stdio + HTTP)
+Tunnel: Home Agent ready (tunnel-client + MCP :8001)
 Datum: 2026-06-15
+Senaste commits: 1a0c254 (uv), 1ad0009 (requirements cleanup)
 ```
