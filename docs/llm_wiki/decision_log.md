@@ -4,6 +4,16 @@ Enkel logg över arkitektur- och scope-beslut. Nyaste överst.
 
 ---
 
+## 2026-06-15 — MCP skeleton med read-only tools via app/tools/
+
+**Beslut:** Inför `app/mcp/` med FastMCP (`mcp`-paketet); exponera endast `read_calendar`, `read_recent_emails`, `read_email`.
+
+**Motivering:** ChatGPT App / MCP-klienter ska återanvända samma tool-kontrakt utan duplicerad provider-logik.
+
+**Konsekvens:** MCP-lagret anropar `app/tools/` via `bridge.py` — aldrig providers direkt. Servern använder **stdio transport** (lokala MCP-klienter). ChatGPT App/Connector kräver **HTTP/HTTPS-nåbar MCP-endpoint** som separat nästa steg (streamable HTTP-transport eller adapter + tunnel/dev mode). Ingen publicering eller deploy i denna fas.
+
+---
+
 ## 2026-06-15 — app/tools/ med enhetligt read-only JSON-kontrakt
 
 **Beslut:** Inför `app/tools/` med `ToolResult` och read-only tools; REST-endpoints delegerar till tools.

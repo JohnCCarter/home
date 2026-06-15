@@ -55,16 +55,25 @@ Write-tools (`create_calendar_event`, `draft_email`, `send_email`) är **inte** 
 ## Flöde
 
 ```text
-HTTP route → app/tools → provider → Graph/mock
+HTTP route / MCP tool → app/tools → provider → Graph/mock
 ```
 
-| REST endpoint | Tool |
-|---------------|------|
-| `GET /calendar` | `read_calendar()` |
-| `GET /mail` | `read_recent_emails()` |
-| `GET /mail/{message_id}` | `read_email(message_id)` |
+| Klient | Väg |
+|--------|-----|
+| REST | `GET /calendar`, `GET /mail`, `GET /mail/{message_id}` |
+| MCP | `read_calendar`, `read_recent_emails`, `read_email` |
 
-REST returnerar `data`-delen vid success (bakåtkompatibelt). Tool-lagret används internt; framtida MCP/ChatGPT kan anropa samma tools och få full `ToolResult`.
+REST returnerar `data`-delen vid success (bakåtkompatibelt). MCP returnerar full `ToolResult`.
+
+## MCP tools (read-only)
+
+| MCP tool | app/tools |
+|----------|-----------|
+| `read_calendar` | `read_calendar()` |
+| `read_recent_emails` | `read_recent_emails()` |
+| `read_email(message_id)` | `read_email(message_id)` |
+
+Inga write-tools exponeras via MCP.
 
 ## `read_calendar`
 

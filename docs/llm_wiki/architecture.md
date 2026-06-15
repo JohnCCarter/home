@@ -18,7 +18,7 @@ ChatGPT / App / Voice / MCP
  Outlook / Google APIs
 ```
 
-**Idag:** REST-endpoints anropar `app/tools/` som delegerar till providers.
+**Idag:** REST-endpoints och MCP-server anropar `app/tools/` som delegerar till providers.
 
 ## Repo-layout
 
@@ -36,6 +36,10 @@ home/
 │   │   ├── serialization.py
 │   │   ├── calendar_tools.py
 │   │   └── email_tools.py
+│   ├── mcp/                 # MCP / ChatGPT App connector (read-only)
+│   │   ├── bridge.py        # MCP → app/tools (ingen provider-access)
+│   │   ├── schemas.py       # Tool metadata
+│   │   └── server.py        # FastMCP stdio-server
 │   └── providers/
 │       ├── base.py
 │       ├── mock_provider.py
@@ -59,6 +63,15 @@ home/
 - `read_calendar`, `read_recent_emails`, `read_email`
 - Mappar `GraphApiError` → `auth_required`, `permission_denied`, etc.
 - Använder `get_valid_tokens()` via `deps.get_provider_with_name()`
+
+### `app/mcp/`
+
+- MCP-skeleton via officiella Python-SDK:t `mcp` (FastMCP)
+- Exponerar endast read-only tools: `read_calendar`, `read_recent_emails`, `read_email`
+- `bridge.py` anropar `app/tools/` — **aldrig** providers direkt
+- Returnerar full `ToolResult` som JSON (`to_dict()`)
+- **Transport idag:** stdio (`PYTHONPATH=. python -m app.mcp.server`) — giltigt för lokala MCP-klienter
+- **Nästa transport-steg:** HTTP/HTTPS (streamable) så ChatGPT App/Connector kan nå endpointen via tunnel/dev mode
 
 ### `app/main.py`
 
