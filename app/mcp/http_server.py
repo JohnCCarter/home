@@ -13,6 +13,7 @@ def configure_http_settings(
     *,
     dev_allowed_hosts: list[str] | None = None,
     dev_allowed_origins: list[str] | None = None,
+    enable_openai_tunnel_dev: bool | None = None,
 ) -> None:
     mcp.settings.host = host
     mcp.settings.port = port
@@ -21,6 +22,7 @@ def configure_http_settings(
         bind_host=host,
         extra_allowed_hosts=dev_allowed_hosts,
         extra_allowed_origins=dev_allowed_origins,
+        enable_openai_tunnel_dev=enable_openai_tunnel_dev,
     )
 
 
@@ -39,12 +41,14 @@ def run_http_server(
     *,
     dev_allowed_hosts: list[str] | None = None,
     dev_allowed_origins: list[str] | None = None,
+    enable_openai_tunnel_dev: bool | None = None,
 ) -> None:
     configure_http_settings(
         host,
         port,
         dev_allowed_hosts=dev_allowed_hosts,
         dev_allowed_origins=dev_allowed_origins,
+        enable_openai_tunnel_dev=enable_openai_tunnel_dev,
     )
     mcp.run(transport="streamable-http")
 
@@ -66,12 +70,19 @@ def main() -> None:
         default=None,
         help="Dev/test only: extra allowed Origin header (repeatable).",
     )
+    parser.add_argument(
+        "--openai-tunnel",
+        action="store_true",
+        help="Dev/test only: allow ChatGPT/OpenAI origins for OpenAI UI Tunnel "
+        "(same as MCP_DEV_OPENAI_TUNNEL=1). Not for production.",
+    )
     args = parser.parse_args()
     run_http_server(
         host=args.host,
         port=args.port,
         dev_allowed_hosts=args.dev_allowed_host,
         dev_allowed_origins=args.dev_allowed_origin,
+        enable_openai_tunnel_dev=True if args.openai_tunnel else None,
     )
 
 

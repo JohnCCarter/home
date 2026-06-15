@@ -76,6 +76,7 @@ home/
 - **HTTP transport (streamable):** `PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001`
   - Endpoint: `http://127.0.0.1:8001/mcp` (FastMCP default `streamable_http_path`)
 - **Dev-only tunnel hosts:** `MCP_DEV_ALLOWED_HOSTS` eller `--dev-allowed-host` (explicit opt-in; DNS rebinding förblir på)
+- **OpenAI UI Tunnel dev-mode:** `MCP_DEV_OPENAI_TUNNEL=1` eller `--openai-tunnel` (lägger till `https://chatgpt.com` / `https://chat.openai.com` origins only)
 - Båda transporterna delar samma `mcp`-instans, tools och `bridge.py`
 - **Nästa steg:** manuell ChatGPT developer mode-test via tunnel/HTTPS
 

@@ -8,6 +8,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 
 MCP_DEV_ALLOWED_HOSTS_ENV = "MCP_DEV_ALLOWED_HOSTS"
 MCP_DEV_ALLOWED_ORIGINS_ENV = "MCP_DEV_ALLOWED_ORIGINS"
+MCP_DEV_OPENAI_TUNNEL_ENV = "MCP_DEV_OPENAI_TUNNEL"
 
 DEFAULT_LOCAL_HOSTS = ("127.0.0.1:*", "localhost:*", "[::1]:*")
 DEFAULT_LOCAL_ORIGINS = (
@@ -15,6 +16,24 @@ DEFAULT_LOCAL_ORIGINS = (
     "http://localhost:*",
     "http://[::1]:*",
 )
+
+# Dev-only origins for ChatGPT OpenAI UI Tunnel (explicit opt-in via MCP_DEV_OPENAI_TUNNEL).
+OPENAI_TUNNEL_DEV_ORIGINS = (
+    "https://chatgpt.com",
+    "https://chatgpt.com:*",
+    "https://chat.openai.com",
+    "https://chat.openai.com:*",
+)
+
+
+def _is_truthy_env(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def is_openai_tunnel_dev_mode(explicit: bool | None = None) -> bool:
+    if explicit is not None:
+        return explicit
+    return _is_truthy_env(MCP_DEV_OPENAI_TUNNEL_ENV)
 
 
 def _split_csv(value: str) -> list[str]:
@@ -55,12 +74,15 @@ def build_transport_security(
     bind_host: str = "127.0.0.1",
     extra_allowed_hosts: Iterable[str] | None = None,
     extra_allowed_origins: Iterable[str] | None = None,
+    *,
+    enable_openai_tunnel_dev: bool | None = None,
 ) -> TransportSecuritySettings:
     """Build transport security with localhost defaults and optional dev tunnel hosts."""
     env_hosts = _split_csv(os.getenv(MCP_DEV_ALLOWED_HOSTS_ENV, ""))
     env_origins = _split_csv(os.getenv(MCP_DEV_ALLOWED_ORIGINS_ENV, ""))
     cli_hosts = list(extra_allowed_hosts or ())
     cli_origins = list(extra_allowed_origins or ())
+    openai_tunnel_dev = is_openai_tunnel_dev_mode(enable_openai_tunnel_dev)
 
     allowed_hosts = list(DEFAULT_LOCAL_HOSTS)
     if bind_host not in ("127.0.0.1", "localhost", "::1"):
@@ -72,6 +94,8 @@ def build_transport_security(
         allowed_hosts.extend(_normalize_allowed_hosts(dev_hosts))
 
     allowed_origins = list(DEFAULT_LOCAL_ORIGINS)
+    if openai_tunnel_dev:
+        allowed_origins.extend(OPENAI_TUNNEL_DEV_ORIGINS)
     dev_origins = env_origins + cli_origins
     if dev_origins:
         allowed_origins.extend(_normalize_allowed_origins(dev_origins))
@@ -89,11 +113,13 @@ def apply_mcp_transport_security(
     bind_host: str = "127.0.0.1",
     extra_allowed_hosts: Iterable[str] | None = None,
     extra_allowed_origins: Iterable[str] | None = None,
+    enable_openai_tunnel_dev: bool | None = None,
 ) -> TransportSecuritySettings:
     settings = build_transport_security(
         bind_host=bind_host,
         extra_allowed_hosts=extra_allowed_hosts,
         extra_allowed_origins=extra_allowed_origins,
+        enable_openai_tunnel_dev=enable_openai_tunnel_dev,
     )
     mcp.settings.transport_security = settings
     return settings

@@ -63,6 +63,37 @@ PYTHONPATH=. python -m app.mcp.http_server --dev-allowed-host your-tunnel-host.e
 
 MCP connector URL: `https://<tunnel-host>/mcp` — exponera **endast** port 8001, inte REST/OAuth på 8000.
 
+**OpenAI UI Tunnel (dev only, rekommenderat för ChatGPT-test):**
+
+1. I ChatGPT: **New App** → **Connection** → **Tunnel** → **Create tunnel**
+2. Ange lokal MCP endpoint: `http://127.0.0.1:8001/mcp`
+3. Starta MCP HTTP med OpenAI tunnel dev-mode (tillåter ChatGPT origins):
+
+```powershell
+# Windows PowerShell
+$env:PYTHONPATH="."
+$env:MCP_DEV_OPENAI_TUNNEL="1"
+python -m app.mcp.http_server --host 127.0.0.1 --port 8001
+```
+
+```bash
+# bash
+export PYTHONPATH=.
+export MCP_DEV_OPENAI_TUNNEL=1
+PYTHONPATH=. python -m app.mcp.http_server --host 127.0.0.1 --port 8001
+# eller: --openai-tunnel
+```
+
+**Authentication i ChatGPT UI:** välj **No auth / None** om möjligt. Skriv aldrig Microsoft client secret i ChatGPT UI. Om UI kräver OAuth — pausa och utred separat.
+
+**Om OpenAI Tunnel ger Host-fel (421):** lägg till specifik tunnel-host (utan `https://`):
+
+```powershell
+$env:MCP_DEV_ALLOWED_HOSTS="<tunnel-host-without-https>"
+```
+
+Vanligtvis räcker `MCP_DEV_OPENAI_TUNNEL=1` eftersom OpenAI Tunnel proxar mot localhost — extra host behövs bara om UI visar ett specifikt host-namn.
+
 | | |
 |---|---|
 | MCP endpoint | `http://127.0.0.1:8001/mcp` |

@@ -4,6 +4,16 @@ Enkel logg över arkitektur- och scope-beslut. Nyaste överst.
 
 ---
 
+## 2026-06-15 — OpenAI UI Tunnel dev-mode för MCP HTTP
+
+**Beslut:** Lägg till `MCP_DEV_OPENAI_TUNNEL=1` / `--openai-tunnel` som explicit dev opt-in; tillåt `https://chatgpt.com` och `https://chat.openai.com` origins endast i det läget.
+
+**Motivering:** ChatGPT OpenAI Tunnel proxar mot lokal MCP; Origin-validering blockerade utan dev-flagga. Host förblir localhost-only om inte `MCP_DEV_ALLOWED_HOSTS` sätts.
+
+**Konsekvens:** Default oförändrat säkert. Nästa steg: manuell ChatGPT developer mode-test.
+
+---
+
 ## 2026-06-15 — Dev-only MCP tunnel hosts + read_email not_found
 
 **Beslut:** Lägg till `app/mcp/transport_config.py` med `MCP_DEV_ALLOWED_HOSTS` (explicit opt-in); mappa Graph 400/404 på `read_email` till `not_found`.

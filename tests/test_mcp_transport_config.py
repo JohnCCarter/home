@@ -3,9 +3,13 @@ import pytest
 from app.mcp.http_server import configure_http_settings
 from app.mcp.transport_config import (
     MCP_DEV_ALLOWED_HOSTS_ENV,
+    MCP_DEV_OPENAI_TUNNEL_ENV,
+    OPENAI_TUNNEL_DEV_ORIGINS,
     apply_mcp_transport_security,
     build_transport_security,
 )
+from app.mcp.schemas import READ_ONLY_TOOL_NAMES
+from app.mcp.server import mcp
 from app.providers.outlook_provider import GraphApiError
 from mcp.server.transport_security import TransportSecurityMiddleware
 
@@ -15,6 +19,59 @@ def test_default_transport_security_is_localhost_only():
     assert settings.enable_dns_rebinding_protection is True
     assert "127.0.0.1:*" in settings.allowed_hosts
     assert "tunnel.example.com" not in settings.allowed_hosts
+    assert "https://chatgpt.com" not in settings.allowed_origins
+
+
+def test_default_has_no_host_wildcard():
+    settings = build_transport_security(bind_host="127.0.0.1")
+    assert not any(host in ("*", "*:*") or host.startswith("*.") for host in settings.allowed_hosts)
+
+
+def test_openai_tunnel_dev_mode_adds_chatgpt_origins_only(monkeypatch):
+    monkeypatch.setenv(MCP_DEV_OPENAI_TUNNEL_ENV, "1")
+    settings = build_transport_security(bind_host="127.0.0.1")
+    for origin in OPENAI_TUNNEL_DEV_ORIGINS:
+        assert origin in settings.allowed_origins
+    assert "tunnel.example.com" not in settings.allowed_hosts
+
+
+def test_openai_tunnel_dev_mode_does_not_change_hosts_without_explicit_host(monkeypatch):
+    monkeypatch.setenv(MCP_DEV_OPENAI_TUNNEL_ENV, "1")
+    settings = build_transport_security(bind_host="127.0.0.1")
+    middleware = TransportSecurityMiddleware(settings)
+    assert middleware._validate_host("127.0.0.1:8001") is True
+    assert middleware._validate_host("tunnel.example.com") is False
+
+
+def test_openai_tunnel_dev_mode_opt_in_via_cli_flag():
+    settings = build_transport_security(bind_host="127.0.0.1", enable_openai_tunnel_dev=True)
+    assert "https://chatgpt.com" in settings.allowed_origins
+
+
+def test_openai_tunnel_dev_mode_off_by_default(monkeypatch):
+    monkeypatch.delenv(MCP_DEV_OPENAI_TUNNEL_ENV, raising=False)
+    settings = build_transport_security(bind_host="127.0.0.1", enable_openai_tunnel_dev=False)
+    assert "https://chatgpt.com" not in settings.allowed_origins
+
+
+def test_openai_tunnel_origin_allowed_when_dev_mode_enabled():
+    settings = build_transport_security(bind_host="127.0.0.1", enable_openai_tunnel_dev=True)
+    middleware = TransportSecurityMiddleware(settings)
+    assert middleware._validate_origin("https://chatgpt.com") is True
+    assert middleware._validate_origin("https://chat.openai.com") is True
+
+
+def test_no_write_tools_exposed():
+    import asyncio
+
+    async def _list():
+        return await mcp.list_tools()
+
+    tools = asyncio.run(_list())
+    tool_names = {tool.name for tool in tools}
+    assert tool_names == set(READ_ONLY_TOOL_NAMES)
+    assert "send_email" not in tool_names
+    assert "delete_email" not in tool_names
 
 
 def test_dev_allowed_hosts_opt_in_via_env(monkeypatch):
