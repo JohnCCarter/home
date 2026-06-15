@@ -2,7 +2,7 @@ import pytest
 import httpx
 
 from app.providers.base import DISABLED_WRITE_MESSAGE
-from app.providers.outlook_provider import OutlookProvider
+from app.providers.outlook_provider import GraphApiError, OutlookProvider
 
 
 @pytest.mark.asyncio
@@ -116,6 +116,21 @@ async def test_read_recent_emails_null_received_datetime():
     # Should fall back to epoch without raising
     from datetime import datetime, timezone
     assert messages[0].received_at == datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+@pytest.mark.asyncio
+async def test_read_calendar_graph_auth_error():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(status_code=401, json={"error": {"code": "InvalidAuthenticationToken"}})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        provider = OutlookProvider(access_token="token", client=client)
+        with pytest.raises(GraphApiError) as exc:
+            await provider.read_calendar()
+
+    assert exc.value.status_code == 401
+    assert "mailbox or calendar" in exc.value.message
 
 
 @pytest.mark.asyncio

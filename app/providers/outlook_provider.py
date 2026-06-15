@@ -8,6 +8,34 @@ from app.providers.base import CalendarEvent, CalendarProvider, EmailMessage, Em
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 
 
+class GraphApiError(Exception):
+    def __init__(self, status_code: int, message: str) -> None:
+        self.status_code = status_code
+        self.message = message
+        super().__init__(message)
+
+
+def _graph_error_message(response: httpx.Response) -> str:
+    if response.status_code in (401, 403):
+        return (
+            "Microsoft Graph could not access mailbox or calendar. "
+            "Your signed-in account may not have an Exchange Online mailbox or license. "
+            "For personal Hotmail/Outlook, set AZURE_TENANT_ID=common in .env and sign in again."
+        )
+
+    try:
+        body = response.json()
+        error = body.get("error", {})
+        code = error.get("code")
+        message = error.get("message")
+        if code or message:
+            return f"Microsoft Graph error ({response.status_code}): {code or 'unknown'} — {message or 'request failed'}"
+    except ValueError:
+        pass
+
+    return f"Microsoft Graph request failed with status {response.status_code}."
+
+
 class OutlookProvider(CalendarProvider, EmailProvider):
     def __init__(self, access_token: str, client: Optional[httpx.AsyncClient] = None) -> None:
         self._access_token = access_token
@@ -18,12 +46,14 @@ class OutlookProvider(CalendarProvider, EmailProvider):
 
         if self._client is not None:
             response = await self._client.get(f"{GRAPH_BASE_URL}{path}", headers=headers, params=params)
-            response.raise_for_status()
+            if response.is_error:
+                raise GraphApiError(response.status_code, _graph_error_message(response))
             return response.json()
 
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(f"{GRAPH_BASE_URL}{path}", headers=headers, params=params)
-            response.raise_for_status()
+            if response.is_error:
+                raise GraphApiError(response.status_code, _graph_error_message(response))
             return response.json()
 
     async def read_calendar(self) -> List[CalendarEvent]:

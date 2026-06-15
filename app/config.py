@@ -20,7 +20,11 @@ class Settings:
     azure_client_secret: str
     azure_redirect_uri: str
 
-
+    @property
+    def oauth_authority_base(self) -> str:
+        """OAuth v2 base URL. Use AZURE_TENANT_ID=common for personal Microsoft accounts."""
+        tenant = self.azure_tenant_id.strip()
+        return f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0"
 
 def get_settings() -> Settings:
     load_dotenv(dotenv_path=Path(".env"), override=False)

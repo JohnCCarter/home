@@ -41,7 +41,7 @@ def test_callback_rejects_invalid_state():
     response = client.get("/auth/microsoft/callback", params={"code": "abc", "state": "bad"})
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Invalid OAuth state"
+    assert "Invalid or expired OAuth state" in response.text
 
 
 def test_tokens_never_returned_or_logged(monkeypatch, caplog):
@@ -62,7 +62,8 @@ def test_tokens_never_returned_or_logged(monkeypatch, caplog):
         response = client.get("/auth/microsoft/callback", params={"code": "abc", "state": state})
 
     assert response.status_code == 200
-    assert response.json() == {"status": "authenticated"}
+    assert "Login successful" in response.text
+    assert "super-secret-access" not in response.text
 
     all_logs = "\n".join(record.getMessage() for record in caplog.records)
     assert "super-secret-access" not in all_logs
