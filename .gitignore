@@ -151,6 +151,7 @@ activemq-data/
 .env
 .envrc
 .venv
+token_store.json
 env/
 venv/
 ENV/
