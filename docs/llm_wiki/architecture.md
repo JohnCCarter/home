@@ -78,7 +78,20 @@ home/
 - **Dev-only tunnel hosts:** `MCP_DEV_ALLOWED_HOSTS` eller `--dev-allowed-host` (explicit opt-in; DNS rebinding förblir på)
 - **OpenAI UI Tunnel dev-mode:** `MCP_DEV_OPENAI_TUNNEL=1` eller `--openai-tunnel` (lägger till `https://chatgpt.com` / `https://chat.openai.com` origins only)
 - Båda transporterna delar samma `mcp`-instans, tools och `bridge.py`
-- **Nästa steg:** manuell ChatGPT developer mode-test via tunnel/HTTPS
+- **OpenAI Secure MCP Tunnel:** Platform-tunnel kräver lokal [tunnel-client](https://github.com/openai/tunnel-client) som proxar control plane → `http://127.0.0.1:8001/mcp` (binary i `tools/tunnel-client/`, gitignored)
+- ChatGPT connector: **No auth** — OAuth metadata på MCP-servern är valfri (doctor kan varna)
+
+```text
+ChatGPT (Tunnel connector)
+        │
+        ▼
+OpenAI control plane  ←── tunnel-client (poll/register)
+        │
+        ▼
+MCP HTTP :8001/mcp  →  app/mcp/bridge.py  →  app/tools/  →  providers
+        ▲
+REST/OAuth :8000  (Microsoft login, token_store.json — gitignored)
+```
 
 ### `app/main.py`
 

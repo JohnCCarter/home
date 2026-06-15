@@ -149,3 +149,13 @@ Enkel logg över arkitektur- och scope-beslut. Nyaste överst.
 **Beslut:** Detta repo är Home Agent — ingen delad governance med Fib/Genesis.
 
 **Motivering:** Personlig kalender/mail-agent med enkel utvecklingsmodell.
+
+---
+
+## 2026-06-15 — OpenAI Secure MCP Tunnel via tunnel-client
+
+**Beslut:** ChatGPT Platform-tunnel (**Home Agent**) kräver lokal `tunnel-client` mot MCP HTTP på `:8001`. Connector-auth: **No auth**. Binary och `CONTROL_PLANE_API_KEY` hålls lokalt (gitignored / `.env`).
+
+**Motivering:** Platform skapar tunnel-posten; runtime kräver outbound poller. OAuth metadata på MCP-servern behövs inte för No-auth-läge. REST/OAuth förblir på `:8000`, separat från MCP-exponering.
+
+**Runbook:** [handoff.md](handoff.md)

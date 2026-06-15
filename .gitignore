@@ -223,3 +223,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local OpenAI tunnel-client binary (runtime only, not in repo)
+tools/tunnel-client/

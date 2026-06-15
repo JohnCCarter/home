@@ -103,6 +103,10 @@ OAuth sker via FastAPI på port 8000 (`/auth/microsoft/login`). MCP HTTP-servern
 
 Utan inloggning används mock-data. Efter OAuth sparas tokens i `token_store.json` (gitignored).
 
+### OpenAI Secure MCP Tunnel (ChatGPT)
+
+Platform-tunnel kräver lokal [tunnel-client](https://github.com/openai/tunnel-client) (ej i repo). Starta REST (`:8000`), MCP HTTP (`:8001` med `MCP_DEV_OPENAI_TUNNEL=1`), sedan `tunnel-client run`. Full runbook: **[docs/llm_wiki/handoff.md](docs/llm_wiki/handoff.md)**.
+
 ## Tester
 
 ```bash
