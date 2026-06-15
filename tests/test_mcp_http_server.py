@@ -1,4 +1,5 @@
 import pytest
+from starlette.applications import Starlette
 from starlette.testclient import TestClient
 
 from app.mcp.http_server import (
@@ -10,6 +11,20 @@ from app.mcp.http_server import (
 from app.mcp.schemas import MCP_HTTP_DEFAULT_PORT, MCP_STREAMABLE_HTTP_PATH, READ_ONLY_TOOL_NAMES
 from app.mcp.server import mcp, mcp_read_calendar, mcp_read_recent_emails
 from app.tools.contracts import ToolError, tool_failure, tool_success
+
+
+@pytest.fixture(autouse=True)
+def _reset_streamable_session_manager():
+    """Give each test a fresh streamable session manager.
+
+    ``StreamableHTTPSessionManager.run()`` can only be called once per instance,
+    and ``mcp`` is a module-level singleton, so two tests that mount the
+    streamable app would otherwise collide. Reset the cached manager around
+    every test.
+    """
+    mcp._session_manager = None
+    yield
+    mcp._session_manager = None
 
 
 def test_http_mcp_app_initializes():
@@ -103,15 +118,18 @@ def test_http_mcp_does_not_import_providers_directly():
 
 
 def test_run_http_server_uses_streamable_http_transport(monkeypatch):
-    captured: dict[str, str] = {}
+    captured: dict = {}
 
-    def fake_run(transport: str = "stdio", mount_path=None):
-        captured["transport"] = transport
+    def fake_uvicorn_run(app, **kwargs):
+        captured["app"] = app
+        captured["kwargs"] = kwargs
 
-    monkeypatch.setattr("app.mcp.http_server.mcp.run", fake_run)
+    monkeypatch.setattr("uvicorn.run", fake_uvicorn_run)
     run_http_server(host="127.0.0.1", port=8002)
 
-    assert captured["transport"] == "streamable-http"
+    assert isinstance(captured["app"], Starlette)
+    assert captured["kwargs"]["host"] == "127.0.0.1"
+    assert captured["kwargs"]["port"] == 8002
     assert mcp.settings.host == "127.0.0.1"
     assert mcp.settings.port == 8002
 
@@ -134,18 +152,36 @@ def test_stdio_server_still_uses_stdio_transport(monkeypatch):
 def test_http_mcp_endpoint_accepts_post():
     configure_http_settings("127.0.0.1", MCP_HTTP_DEFAULT_PORT)
     app = create_streamable_http_app()
+    init_payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": {"name": "test", "version": "1.0"},
+        },
+    }
+    with TestClient(app, base_url="http://127.0.0.1:8001") as client:
+        response = client.post(MCP_STREAMABLE_HTTP_PATH, json=init_payload)
+        assert response.status_code in {200, 202, 406}
+
+
+def test_http_mcp_request_without_session_id_is_not_rejected():
+    """Regression: the ChatGPT/OpenAI tunnel forwards tools/call without an
+    ``mcp-session-id`` header. A *stateful* MCP server rejects those with HTTP 400
+    ("Missing session ID"), which surfaced to ChatGPT as a 502 upstream error.
+    ``stateless_http=True`` on the FastMCP server must keep session-less requests
+    working. Guards against silently reverting that flag.
+    """
+    configure_http_settings("127.0.0.1", MCP_HTTP_DEFAULT_PORT)
+    app = create_streamable_http_app()
+    payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
     with TestClient(app, base_url="http://127.0.0.1:8001") as client:
         response = client.post(
             MCP_STREAMABLE_HTTP_PATH,
-            json={
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "initialize",
-                "params": {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {},
-                    "clientInfo": {"name": "test", "version": "1.0"},
-                },
-            },
+            json=payload,
+            headers={"Accept": "application/json, text/event-stream"},
         )
-    assert response.status_code in {200, 202, 406}
+    assert response.status_code != 400, response.text
+    assert response.status_code == 200

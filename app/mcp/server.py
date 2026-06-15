@@ -11,6 +11,10 @@ mcp = FastMCP(
     host="127.0.0.1",
     port=MCP_HTTP_DEFAULT_PORT,
     streamable_http_path=MCP_STREAMABLE_HTTP_PATH,
+    # ChatGPT/OpenAI tunnel forwards tools/call without an mcp-session-id header,
+    # which a stateful server rejects with HTTP 400 ("Missing session ID").
+    # Stateless mode makes each request self-contained so no session is required.
+    stateless_http=True,
 )
 
 apply_mcp_transport_security(mcp, bind_host="127.0.0.1")

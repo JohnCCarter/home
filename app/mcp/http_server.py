@@ -50,7 +50,14 @@ def run_http_server(
         dev_allowed_origins=dev_allowed_origins,
         enable_openai_tunnel_dev=enable_openai_tunnel_dev,
     )
-    mcp.run(transport="streamable-http")
+    import uvicorn
+
+    uvicorn.run(
+        create_streamable_http_app(),
+        host=host,
+        port=port,
+        log_level="info",
+    )
 
 
 def main() -> None:
