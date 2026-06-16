@@ -1,6 +1,6 @@
 # Handoff
 
-Senast uppdaterad: 2026-06-15 (final hem-resume — uv + OpenAI Tunnel)
+Senast uppdaterad: 2026-06-16 (safety-grind + runtime status-polish, pushat på effe798)
 
 ## Aktuell status (runtime)
 
@@ -284,19 +284,23 @@ Att klistra in `<din nyckel>` ordagrant → `401 Unauthorized` i control-plane-p
 ### Ofarliga varningar
 `doctor` rödmarkerar `oauth_metadata` (404 på `/.well-known/oauth-protected-resource`) och `run` loggar "OAuth discovery failed: invalid character 'N'". Det är **förväntat** för en No-auth-server och blockerar ingenting.
 
-## Nästa steg (efter ChatGPT-test)
+## Nästa steg (ej påbörjade)
 
-1. **`app/safety/`** — bekräftelse för write-actions (senare)
-2. Google provider
-3. Wake-word-sidecar
+1. Google provider
+2. Wake-word-sidecar
+3. Framtida write-tool-design — bakom safety-grinden + explicit `confirm`
+
+`app/safety/`-grunden och status-polish (version + safety-summary, inget drift-känsligt
+testantal i runtime) är **klara** och pushade.
 
 ## Senaste verifiering
 
 ```text
-Kommando: uv lock --check && uv run pytest -q
-Resultat: lock OK, 102 passed
+Kommando: uv lock --check && PYTHONDONTWRITEBYTECODE=1 uv run --no-sync pytest -q
+Resultat: lock OK, 128 passed
 Graph: read-only via tools + MCP (stdio + HTTP)
-Tunnel: Home Agent ready (tunnel-client + MCP :8001)
-Datum: 2026-06-15
-Senaste commits: 1a0c254 (uv), 1ad0009 (requirements cleanup)
+Tunnel: per-maskin (home-agent / home-agent-work), MCP :8001 stateless
+Datum: 2026-06-16
+HEAD: effe798 (origin/main == HEAD)
+Batch: 50f6275 status-metadata · 9ee8530 codeql-fix · 9285a17 AGENTS-konstitution+CLAUDE.md · effe798 drop runtime test count
 ```
