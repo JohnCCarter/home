@@ -53,6 +53,23 @@ def test_health_has_no_secret_fields():
         assert marker not in payload
 
 
+def test_health_includes_version():
+    assert "version" in client.get("/health").json()
+
+
+def test_health_includes_safety_summary():
+    safety = client.get("/health").json()["safety"]
+    assert safety == {
+        "read": "allowed",
+        "write": "confirmation_required",
+        "delete": "forbidden",
+    }
+
+
+def test_health_has_no_tunnel_ids():
+    assert "tunnel_" not in client.get("/health").text
+
+
 # --- /status -----------------------------------------------------------------
 
 
@@ -73,6 +90,40 @@ def test_status_has_no_secrets():
     body = client.get("/status").text
     for marker in SECRET_MARKERS:
         assert marker not in body
+
+
+def test_status_includes_home_agent_heading():
+    assert "Home Agent" in client.get("/status").text
+
+
+def test_status_includes_mode_read_only():
+    assert "read-only" in client.get("/status").text
+
+
+def test_status_includes_safety_summary():
+    body = client.get("/status").text
+    assert "allowed" in body          # read
+    assert "confirmation" in body     # write requires confirmation
+    assert "forbidden" in body        # delete
+
+
+def test_status_includes_version_field():
+    # Field is always present; value is a commit when git is available, else "unknown".
+    assert "Git commit / version" in client.get("/status").text
+
+
+def test_status_includes_expected_test_count():
+    from app.runtime_metadata import EXPECTED_TEST_COUNT
+
+    assert str(EXPECTED_TEST_COUNT) in client.get("/status").text
+
+
+def test_status_has_no_tunnel_ids():
+    import re
+
+    body = client.get("/status").text
+    assert "tunnel_" not in body
+    assert re.search(r"tunnel_[a-z0-9]{32}", body) is None
 
 
 # --- PowerShell start scripts ------------------------------------------------

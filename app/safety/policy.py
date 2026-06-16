@@ -51,17 +51,12 @@ class SafetyDecision:
     error_code: Optional[ToolErrorCode] = None
 
 
-def evaluate(action: str, confirmed: bool = False) -> SafetyDecision:
-    """Decide whether ``action`` may run, given an in-band ``confirmed`` flag."""
-    action_class = classify(action)
+def decision_for_class(action_class: ActionClass, confirmed: bool = False) -> SafetyDecision:
+    """Decision for a known action class, independent of any registered name.
 
-    if action_class is None:
-        return SafetyDecision(
-            allowed=False,
-            reason=f"Unknown action '{action}' is denied by default.",
-            error_code="permission_denied",
-        )
-
+    Lets callers describe the policy per class (e.g. the /status safety summary)
+    without needing a registered action of that class.
+    """
     if action_class is ActionClass.READ:
         return SafetyDecision(allowed=True, reason="Read actions run without confirmation.")
 
@@ -80,3 +75,15 @@ def evaluate(action: str, confirmed: bool = False) -> SafetyDecision:
         reason="Write action requires explicit confirmation (confirm=true).",
         error_code="confirmation_required",
     )
+
+
+def evaluate(action: str, confirmed: bool = False) -> SafetyDecision:
+    """Decide whether ``action`` may run, given an in-band ``confirmed`` flag."""
+    action_class = classify(action)
+    if action_class is None:
+        return SafetyDecision(
+            allowed=False,
+            reason=f"Unknown action '{action}' is denied by default.",
+            error_code="permission_denied",
+        )
+    return decision_for_class(action_class, confirmed)

@@ -10,6 +10,12 @@ from app.mcp.schemas import (
     MCP_STREAMABLE_HTTP_PATH,
     READ_ONLY_TOOL_NAMES,
 )
+from app.runtime_metadata import (
+    EXPECTED_TEST_COUNT,
+    resolve_version,
+    safety_display_label,
+    safety_summary,
+)
 from app.tools import http_status_for_error, read_calendar, read_email, read_recent_emails
 from app.tools.contracts import ToolResult
 from app.web_ui import BASE_STYLES, NARROW_MAIN_STYLES
@@ -115,6 +121,8 @@ async def get_health() -> dict:
         "service": "home-agent",
         "mode": "read-only",
         "tools": list(READ_ONLY_TOOL_NAMES),
+        "version": resolve_version(),
+        "safety": safety_summary(),
     }
 
 
@@ -126,6 +134,11 @@ async def get_status() -> HTMLResponse:
     from html import escape
 
     tool_items = "".join(f"<li><code>{escape(name)}</code></li>" for name in READ_ONLY_TOOL_NAMES)
+    safety_items = "".join(
+        f"<li>{escape(action)} — {escape(safety_display_label(state))}</li>"
+        for action, state in safety_summary().items()
+    )
+    version = escape(resolve_version())
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -150,7 +163,11 @@ async def get_status() -> HTMLResponse:
       <dt>MCP endpoint</dt><dd><code>{escape(MCP_ENDPOINT)}</code></dd>
       <dt>Tunnel client admin UI</dt><dd><code>{escape(TUNNEL_ADMIN_UI)}</code></dd>
       <dt>Tools</dt><dd><ul>{tool_items}</ul></dd>
+      <dt>Safety</dt><dd><ul>{safety_items}</ul></dd>
+      <dt>Git commit / version</dt><dd><code>{version}</code></dd>
+      <dt>Expected test count</dt><dd>{EXPECTED_TEST_COUNT}</dd>
     </dl>
+    <p class="note">Local runtime metadata only — does not check whether the MCP server, tunnel client, or Microsoft Graph are reachable.</p>
     <p class="nav"><a href="/health">/health</a> · <a href="/calendar">Calendar</a> · <a href="/mail">Mail</a></p>
   </main>
 </body>
