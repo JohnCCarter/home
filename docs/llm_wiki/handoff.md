@@ -1,6 +1,6 @@
 # Handoff
 
-Senast uppdaterad: 2026-06-16 (Google calendar-provider-vägen klar, pushat på ab53e31)
+Senast uppdaterad: 2026-06-16 (Google calendar-vägen komplett inkl. refresh flow, pushat på 65d806e)
 
 ## Aktuell status (runtime)
 
@@ -309,15 +309,21 @@ The Google calendar provider path is now complete end-to-end:
 
 `GOOGLE_*` config is optional and fully independent of the Microsoft (`AZURE_*`) flow.
 
-## Nästa steg (ej påbörjade)
+## Nästa möjliga spår (ej påbörjade)
 
-1. `GoogleProvider.read_recent_emails`/`read_email` (Gmail read) — separate later slice; needs
-   MIME/base64url body decoding and is privacy-sensitive (calendar-first was deliberate).
-2. Dual-provider calendar aggregation (both Microsoft + Google at once) — larger design, deferred.
-3. Wake-word-sidecar
-4. Framtida write-tool-design — bakom safety-grinden + explicit `confirm`
+The Google calendar path is feature-complete in code (auth + provider + provider selection +
+refresh-aware tokens). Nothing below is started; pick one as the next slice:
 
-`app/safety/`-grunden och status-polish (version + safety-summary, inget drift-känsligt
+1. **Live-test** Google OAuth + Google calendar provider end-to-end (real `GOOGLE_*` in local
+   `.env`, `HOME_AGENT_CALENDAR_PROVIDER=google`, verify refresh past ~1h).
+2. **Status polish** — surface the selected calendar provider / Google auth status safely on
+   `/status` (no tokens, no secrets — same discipline as the existing safety summary).
+3. **Google provider refinement** — recurring-event expansion (`singleEvents=true`/`orderBy`/
+   `timeMin`); current parity with Outlook returns recurring masters (see `google_provider.py`).
+4. **Gmail read-only** — separate later slice; needs MIME/base64url body decoding, privacy-sensitive.
+5. **Future write-tool design** — behind the safety gate + explicit `confirm`, much later.
+
+`app/safety/`-grunden och status-polish-grunden (version + safety-summary, inget drift-känsligt
 testantal i runtime) är **klara** och pushade.
 
 ## Senaste verifiering
@@ -328,6 +334,6 @@ Resultat: lock OK, 172 passed
 Graph: read-only via tools + MCP (stdio + HTTP)
 Tunnel: per-maskin (home-agent / home-agent-work), MCP :8001 stateless
 Datum: 2026-06-16
-HEAD: feat(auth) refresh Google OAuth tokens (origin/main == HEAD), working tree clean
-Batch: 0f3ef5e google-calendar-provider · ab53e31 explicit google calendar selection · 27f1a0a handoff · <this commit> google refresh flow
+HEAD: 65d806e (origin/main == HEAD), working tree clean
+Batch: 0f3ef5e google-calendar-provider · ab53e31 explicit google calendar selection · 27f1a0a handoff · 65d806e google refresh flow
 ```
