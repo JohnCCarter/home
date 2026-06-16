@@ -11,17 +11,15 @@ from app.providers.base import (
     EmailDetail,
     EmailMessage,
     EmailProvider,
+    ProviderApiError,
 )
 
 GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 MESSAGE_SELECT = "id,subject,from,receivedDateTime,bodyPreview,body"
 
 
-class GraphApiError(Exception):
-    def __init__(self, status_code: int, message: str) -> None:
-        self.status_code = status_code
-        self.message = message
-        super().__init__(message)
+class GraphApiError(ProviderApiError):
+    """Microsoft Graph API error — a provider-specific ProviderApiError."""
 
 
 def _graph_error_message(response: httpx.Response, *, resource: str = "resource") -> str:

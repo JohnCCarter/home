@@ -1,4 +1,4 @@
-from app.providers.outlook_provider import GraphApiError
+from app.providers.base import ProviderApiError
 from app.tools.contracts import ToolResult, map_graph_error, tool_failure, tool_success
 from app.tools.deps import AuthRequiredError, get_provider_with_name
 from app.tools.serialization import serialize_calendar_events
@@ -16,7 +16,7 @@ async def read_calendar() -> ToolResult:
         return tool_failure(
             tool,
             provider_name,
-            map_graph_error(GraphApiError(401, exc.message)),
+            map_graph_error(ProviderApiError(401, exc.message)),
         )
-    except GraphApiError as exc:
+    except ProviderApiError as exc:
         return tool_failure(tool, provider_name, map_graph_error(exc))

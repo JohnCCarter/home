@@ -1,4 +1,4 @@
-from app.providers.outlook_provider import GraphApiError
+from app.providers.base import ProviderApiError
 from app.tools.contracts import (
     ToolError,
     ToolResult,
@@ -23,9 +23,9 @@ async def read_recent_emails() -> ToolResult:
         return tool_failure(
             tool,
             provider_name,
-            map_graph_error(GraphApiError(401, exc.message)),
+            map_graph_error(ProviderApiError(401, exc.message)),
         )
-    except GraphApiError as exc:
+    except ProviderApiError as exc:
         return tool_failure(tool, provider_name, map_graph_error(exc))
 
 
@@ -48,7 +48,7 @@ async def read_email(message_id: str) -> ToolResult:
         return tool_failure(
             tool,
             provider_name,
-            map_graph_error(GraphApiError(401, exc.message)),
+            map_graph_error(ProviderApiError(401, exc.message)),
         )
-    except GraphApiError as exc:
+    except ProviderApiError as exc:
         return tool_failure(tool, provider_name, map_read_email_graph_error(exc))

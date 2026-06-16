@@ -7,6 +7,19 @@ from typing import List
 DISABLED_WRITE_MESSAGE = "disabled in MVP phase"
 
 
+class ProviderApiError(Exception):
+    """Provider-neutral API error (HTTP-style status + message).
+
+    Any provider (Outlook/Graph, Google, …) raises this (or a subclass) so the
+    tools layer can map failures without depending on a Microsoft-specific type.
+    """
+
+    def __init__(self, status_code: int, message: str) -> None:
+        self.status_code = status_code
+        self.message = message
+        super().__init__(message)
+
+
 @dataclass
 class CalendarEvent:
     id: str

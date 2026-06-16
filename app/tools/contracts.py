@@ -1,7 +1,7 @@
 from dataclasses import asdict, dataclass
 from typing import Any, Literal, Optional
 
-from app.providers.outlook_provider import GraphApiError
+from app.providers.base import ProviderApiError
 
 ToolErrorCode = Literal[
     "auth_required",
@@ -64,7 +64,7 @@ def http_status_for_error(code: ToolErrorCode) -> int:
     }.get(code, 500)
 
 
-def map_graph_error(exc: GraphApiError) -> ToolError:
+def map_graph_error(exc: ProviderApiError) -> ToolError:
     if exc.status_code == 401:
         return ToolError("auth_required", exc.message, retryable=False)
     if exc.status_code == 403:
@@ -78,7 +78,7 @@ def map_graph_error(exc: GraphApiError) -> ToolError:
     return ToolError("unknown_error", exc.message, retryable=False)
 
 
-def map_read_email_graph_error(exc: GraphApiError) -> ToolError:
+def map_read_email_graph_error(exc: ProviderApiError) -> ToolError:
     """Map Graph errors for single-message reads (404 and malformed-id 400 → not_found)."""
     if exc.status_code in (400, 404):
         return ToolError("not_found", exc.message, retryable=False)
