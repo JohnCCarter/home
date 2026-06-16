@@ -3,6 +3,7 @@ from typing import List
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
+from app.auth.google import router as google_auth_router
 from app.auth.microsoft import router as microsoft_auth_router
 from app.mcp.schemas import (
     MCP_HTTP_DEFAULT_HOST,
@@ -17,6 +18,7 @@ from app.web_ui import BASE_STYLES, NARROW_MAIN_STYLES
 
 app = FastAPI(title="genesis-core-home-agent")
 app.include_router(microsoft_auth_router)
+app.include_router(google_auth_router)
 
 # Static runtime facts surfaced by /health and /status. These never touch the
 # mailbox, calendar, tokens, or secrets — they only show that the app is alive

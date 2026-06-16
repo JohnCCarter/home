@@ -293,11 +293,17 @@ Att klistra in `<din nyckel>` ordagrant → `401 Unauthorized` i control-plane-p
 `app/safety/`-grunden och status-polish (version + safety-summary, inget drift-känsligt
 testantal i runtime) är **klara** och pushade.
 
-**Google-förberedelser (klara, ingen OAuth/scopes än):** tools-lagret är providerneutralt
+**Google-förberedelser (klara):** tools-lagret är providerneutralt
 (`ProviderApiError`-bas, `GraphApiError` ärver). Token store is namespaced by provider —
-Microsoft/default continues to use `token_store.json`, future Google auth will use
+Microsoft/default continues to use `token_store.json`, Google auth uses
 `token_store_google.json`; token files remain local-only and must never be committed.
-Återstår före Google: `/auth/google`-route + **scope-verifiering mot officiell Google-doc**.
+
+**Google OAuth-route (klar, 2026-06-16):** `/auth/google` login + callback is implemented
+(parallel prefix, PKCE + CSRF state, exact scopes
+`openid email https://www.googleapis.com/auth/calendar.events.readonly`). It stores Google
+tokens in `token_store_google.json`. `GOOGLE_*` config is optional and fully independent of
+the Microsoft (`AZURE_*`) flow. **No `GoogleProvider` exists yet. No `deps.py` provider
+selection exists yet. No MCP/tool signatures changed. No write/delete tools.** Next: `GoogleProvider.read_calendar()` (preflight §13 step 5).
 
 ## Senaste verifiering
 

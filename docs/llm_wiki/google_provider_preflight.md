@@ -135,9 +135,10 @@ Google read-tools är samma READ-actions → grinden oförändrad. read allowed 
 
 1. ~~`ProviderApiError`-bas + låt `GraphApiError` ärva~~ — **klart** (38d513f).
 2. ~~Token-store-namespace (Google-fil separat)~~ — **klart** (2026-06-16).
-3. ~~scope-verifiering~~ — **klart** (2026-06-16, §6 VERIFIED). Nästa slice: `/auth/google`-router (parallell prefix) med `openid email https://www.googleapis.com/auth/calendar.events.readonly`.
-4. `GoogleProvider.read_calendar()` via `httpx`.
-5. `deps.py`: välj Google när Google-token finns (default/precedens definierad).
-6. Tester per §11.
+3. ~~scope-verifiering~~ — **klart** (2026-06-16, §6 VERIFIED).
+4. ~~`/auth/google` login + callback (parallell prefix, PKCE/state)~~ — **klart** (2026-06-16). Sparar Google-tokens i `token_store_google.json`; scopes `openid email https://www.googleapis.com/auth/calendar.events.readonly`. Ingen `GoogleProvider`, inget `deps.py`-val, inga MCP/tool-ändringar, inga write/delete-tools än.
+5. `GoogleProvider.read_calendar()` via `httpx`.
+6. `deps.py`: välj Google när Google-token finns (default/precedens definierad).
+7. Tester per §11.
 
 Gmail-read och dual-provider-aggregering = separata senare slices.
