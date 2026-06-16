@@ -1,19 +1,29 @@
-# AGENTS.md
+# AGENTS.md — konstitution för Home Agent-agenterna
 
-Regler för AI-agenter i **Home Agent**-repot.
+Den här filen är den **överordnade styrande instruktionen** (konstitutionen) för alla
+AI-agenter — Claude Code, Codex och andra — som arbetar i **Home Agent**-repot. Alla
+andra agentkonfigurar (`CLAUDE.md`, `.github/`, IDE-/verktygsspecifika filer) är
+**underordnade** denna fil och får inte motsäga den. Vid konflikt gäller AGENTS.md.
 
 > **Detta är inte Fibonacci. Detta är inte Genesis-Core-V2.**  
 > Använd inte trading-regler, promotion gates eller research-governance från andra projekt.
 
 ## Regelhierarki
 
-**Det här repot är source of truth för Home Agent-beteende.** Repo-lokala instruktioner (`AGENTS.md`, `README.md`, `docs/llm_wiki/`) **överstyr globala/user-level Claude/agent-instruktioner** när de krockar.
+Prioritetsordning vid konflikt (högst först):
 
-1. **Repo vinner** — repo-lokala instruktioner styr allt projektspecifikt: governance, safety, scopes, commits, tester.
-2. **Importera inte Genesis-Core- eller Fibonacci-governance/workflows** om det inte uttryckligen efterfrågas — ingen Opus-review, promotion gates eller andra projekts grindar gäller här.
-3. **Vid konflikt** mellan globala instruktioner och repots `AGENTS.md`/`README.md`/docs eller aktuell task-scope: **följ repo-lokala instruktioner och rapportera konflikten** till användaren.
-4. **Generella globala hygienregler gäller** när de inte krockar — inga secrets i git, komprimerade svar, plan mode för multi-fil-ändringar.
-5. **Personliga globala konventioner behålls** (t.ex. `Mode:`-svarsbanner) — de krockar inte med repo-governance.
+1. **AGENTS.md (denna konstitution)** — styr governance, safety, scopes, commits, tester. Source of truth för Home Agent-beteende.
+2. **Källkod (`app/`, `tests/`)** — source of truth för hur saker *faktiskt* fungerar. Konstitutionen styr *reglerna*, koden avgör *fakta* ([source_authority.md](docs/llm_wiki/source_authority.md)).
+3. **Övriga repo-docs** (`README.md`, `docs/llm_wiki/`) — projektkunskap, underordnade konstitutionen.
+4. **Andra agentkonfigurar** (`CLAUDE.md` m.fl.) — får förtydliga och peka hit, aldrig motsäga.
+5. **Globala/user-level instruktioner** — viker för repot vid konflikt.
+
+Tillämpning:
+
+- **Importera inte Genesis-Core- eller Fibonacci-governance/workflows** om det inte uttryckligen efterfrågas — ingen Opus-review, promotion gates eller andra projekts grindar gäller här.
+- **Vid konflikt** mellan globala instruktioner och repot (denna fil / `README.md` / docs / aktuell task-scope): **följ repo-lokala instruktioner och rapportera konflikten** till användaren.
+- **Generella globala hygienregler gäller** när de inte krockar — inga secrets i git, komprimerade svar, plan mode för multi-fil-ändringar.
+- **Personliga globala konventioner behålls** (t.ex. `Mode:`-svarsbanner) — de krockar inte med repo-governance.
 
 ## Start här
 
@@ -44,8 +54,9 @@ Viktiga sidor:
 |--------|------|
 | OAuth / tokens | `app/auth/` |
 | Graph/Google | `app/providers/` |
-| Tools (planerat) | `app/tools/` |
-| Safety (planerat) | `app/safety/` |
+| Tools (read-only kontrakt) | `app/tools/` |
+| Safety-grind | `app/safety/` |
+| MCP (stdio + HTTP) | `app/mcp/` |
 | Tester | `tests/` |
 | Routing | `app/main.py` (håll tunn) |
 
