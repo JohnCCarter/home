@@ -53,16 +53,34 @@ exakt som före refaktorn; isolering verifierad av `tests/test_token_store_names
 variabel-grupperna oberoende — kräv inte både Azure och Google; saknad Google-config ska
 bara inaktivera Google, inte krascha Microsoft-flödet. Inget nu.
 
-## 6. Kandidat read-only scopes (**not verified** — bekräfta mot officiell Google-doc)
+## 6. Read-only scopes (**VERIFIED 2026-06-16** mot officiell Google-doc)
 
-- Kalender: `https://www.googleapis.com/auth/calendar.readonly`
-- Gmail: `https://www.googleapis.com/auth/gmail.readonly`
-- Identitet: `openid`, `email`, `profile`
+**Calendar-only scope** (mest snävt fokuserade för events-läsning):
 
-Skrivet ur minnet — Inga `*.modify`/`*.send`/full-access-scopes.
+- `https://www.googleapis.com/auth/calendar.events.readonly` — *"View events on all your calendars"*
 
-> **Candidate Google read-only scopes are not verified and must be checked against
-> official Google documentation before implementation.**
+**Identity scopes** (OAuth-login, minimal):
+
+- `openid email`  (`profile` valfri, bara om namn/bild behövs)
+
+**Föreslagen scope-sträng för calendar-only-slicen:**
+
+```
+openid email https://www.googleapis.com/auth/calendar.events.readonly
+```
+
+**Explicitly excluded** (behövs inte / aldrig):
+
+- `https://www.googleapis.com/auth/calendar` (full read/write/**delete**)
+- `https://www.googleapis.com/auth/calendar.events` (read/**write** events)
+- Alla Gmail-scopes (`gmail.readonly` = senare slice; `gmail.send`/`gmail.modify`/full = **aldrig**)
+- Alla `*.modify`/`*.send`/full-access-scopes
+
+**Sources checked:**
+
+- [OAuth 2.0 Scopes for Google APIs](https://developers.google.com/identity/protocols/oauth2/scopes)
+- [Calendar API: Choose auth scopes](https://developers.google.com/workspace/calendar/api/auth)
+- [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect)
 
 ## 7. Calendar-only, mail-only eller båda först? — **Calendar-only**
 
@@ -117,7 +135,7 @@ Google read-tools är samma READ-actions → grinden oförändrad. read allowed 
 
 1. ~~`ProviderApiError`-bas + låt `GraphApiError` ärva~~ — **klart** (38d513f).
 2. ~~Token-store-namespace (Google-fil separat)~~ — **klart** (2026-06-16).
-3. `/auth/google`-router (parallell prefix) + verifierade read-only scopes — **efter** scope-verifiering.
+3. ~~scope-verifiering~~ — **klart** (2026-06-16, §6 VERIFIED). Nästa slice: `/auth/google`-router (parallell prefix) med `openid email https://www.googleapis.com/auth/calendar.events.readonly`.
 4. `GoogleProvider.read_calendar()` via `httpx`.
 5. `deps.py`: välj Google när Google-token finns (default/precedens definierad).
 6. Tester per §11.
