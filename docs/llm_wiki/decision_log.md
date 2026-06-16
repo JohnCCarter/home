@@ -4,6 +4,16 @@ Enkel logg över arkitektur- och scope-beslut. Nyaste överst.
 
 ---
 
+## 2026-06-16 — `app/safety/` write-gate (policy byggd, write fortfarande av)
+
+**Beslut:** Inför `app/safety/policy.py` som central grind: `classify(action)` + `evaluate(action, confirmed)`. Read → tillåtet, write → kräver `confirmed=True`, delete → förbjudet (MVP), okänd action → nekad. Ny felkod `confirmation_required` (HTTP 428) i `ToolErrorCode` och speglad i `app/mcp/result_models.py`; sync-test vaktar de två literalerna.
+
+**Motivering:** Centralisera policyn innan write-tools finns, så grinden är testad mot riktiga read-tools (inte hypotetiska). Bekräftelse måste vara **in-band** (`confirm`-argument) — MCP-servern kör `stateless_http=True` och har ingen session att hålla "pending confirmation" i; sessionsbaserad tvåstegs-bekräftelse skulle bryta ChatGPT-tunneln.
+
+**Konsekvens:** Inga write-tools, inga nya scopes, providers kastar fortfarande `NotImplementedError`. Grinden är redo att konsumeras när write-tools senare läggs till. 114 tester gröna.
+
+---
+
 ## 2026-06-15 — OpenAI UI Tunnel dev-mode för MCP HTTP
 
 **Beslut:** Lägg till `MCP_DEV_OPENAI_TUNNEL=1` / `--openai-tunnel` som explicit dev opt-in; tillåt `https://chatgpt.com` och `https://chat.openai.com` origins endast i det läget.

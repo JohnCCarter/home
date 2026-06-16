@@ -22,8 +22,10 @@ Enkla regler för agent och runtime — ingen tung governance.
 
 ## Implementation idag
 
+- `app/safety/policy.py` — central grind: `classify(action)` + `evaluate(action, confirmed)`. Read tillåts, write kräver `confirmed=True`, delete och okänd action nekas. Felkod `confirmation_required` (HTTP 428).
 - `app/providers/base.py` — skriv-metoder (`create_event`, `send_email`, `mark_as_read`) kastar `NotImplementedError("disabled in MVP phase")`
 - Inga delete-endpoints eller -metoder
+- Inga write-tools registrerade ännu — grinden finns, men providers förblir disabled tills write byggs medvetet
 
 ## Agentbeteende
 
@@ -33,12 +35,14 @@ Enkla regler för agent och runtime — ingen tung governance.
 4. **Minimera data** — returnera bara fält som behövs; exponera inte tokens i API-svar
 5. **Mock som fallback** — utan auth ska `MockProvider` användas, inte felaktiga riktiga anrop
 
-## Planerat safety-lager (`app/safety/`)
+## Safety-lager (`app/safety/`) — byggt 2026-06-16
 
-När det byggs ska det:
+Grinden finns och gör:
 
-- Klassificera varje tool som read/write/delete
-- Blockera write utan bekräftelseflagga från klient
-- Centralisera policy (inte spridd i varje endpoint)
+- Klassificerar varje action som read/write/delete (`classify`)
+- Blockerar write utan bekräftelseflagga och nekar okänd action (`evaluate`)
+- Centraliserar policyn i `app/safety/policy.py` (inte spridd i varje endpoint)
 
-Tills dess: håll write disabled i providers och aktivera inte bredare OAuth-scopes.
+**Bekräftelse är in-band** (`confirm`-argument på själva anropet) — MCP-servern kör `stateless_http=True` och har ingen session att hålla pending-bekräftelse i. Återinför inte sessionsbaserad tvåstegs-bekräftelse; det bryter ChatGPT-tunneln.
+
+Write förblir disabled i providers och inga bredare OAuth-scopes aktiveras förrän write-tools byggs medvetet och konsumerar grinden.

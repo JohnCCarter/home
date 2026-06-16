@@ -45,6 +45,36 @@ Fortfarande **avstängda**:
 - Inga `Mail.Send`, `Mail.ReadWrite`, `Calendars.ReadWrite`
 - Inga delete/move/reply/forward
 
+## Safety policy layer (2026-06-16)
+
+Safety policy layer is now implemented in `app/safety/policy.py`.
+
+**Current behavior:**
+
+- read actions are allowed
+- write actions require `confirmed=True`
+- delete actions are forbidden
+- unknown actions are denied
+
+Confirmation is **in-band** via a `confirm` argument because `stateless_http=True`
+does not support session-based two-step confirmation safely (the ChatGPT tunnel
+forwards `tools/call` without an `mcp-session-id`, so there is no session to hold a
+pending confirmation between calls).
+
+**New contract:**
+
+- `confirmation_required`
+- mapped to HTTP **428**
+- mirrored in MCP result models (`app/mcp/result_models.py`)
+- sync test (`tests/test_error_code_sync.py`) prevents contract/model drift
+
+**Scope — this is a safety foundation only:**
+
+- **No write tools are enabled yet.**
+- **No delete tools are enabled.**
+- **No Microsoft Graph write scopes were added.**
+- **Providers still do not implement write behavior** (`base.py` write methods raise `NotImplementedError`).
+
 ---
 
 ## Fortsätt hemma — resume från ren clone/pull

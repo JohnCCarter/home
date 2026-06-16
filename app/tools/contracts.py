@@ -6,6 +6,7 @@ from app.providers.outlook_provider import GraphApiError
 ToolErrorCode = Literal[
     "auth_required",
     "permission_denied",
+    "confirmation_required",
     "not_found",
     "rate_limited",
     "provider_error",
@@ -54,6 +55,7 @@ def http_status_for_error(code: ToolErrorCode) -> int:
     return {
         "auth_required": 401,
         "permission_denied": 403,
+        "confirmation_required": 428,
         "not_found": 404,
         "rate_limited": 429,
         "provider_error": 502,

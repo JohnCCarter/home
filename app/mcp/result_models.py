@@ -25,6 +25,7 @@ class ToolErrorModel(BaseModel):
     code: Literal[
         "auth_required",
         "permission_denied",
+        "confirmation_required",
         "not_found",
         "rate_limited",
         "provider_error",
