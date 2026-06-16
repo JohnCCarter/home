@@ -24,6 +24,7 @@ Detta är ett **personligt Home Agent-repo** — separat från Fibonacci och Gen
 | [testing.md](testing.md) | Köra tester, mock-provider |
 | [handoff.md](handoff.md) | Aktuell status och nästa steg |
 | [decision_log.md](decision_log.md) | Arkitekturbeslut |
+| [google_provider_preflight.md](google_provider_preflight.md) | Google provider — preflight/design (ej implementerat) |
 
 ## Snabbstart för agenter
 
