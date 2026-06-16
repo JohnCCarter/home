@@ -18,7 +18,7 @@ async def test_read_calendar_returns_standard_tool_result(monkeypatch):
     async def fake_get_provider():
         return provider, "mock"
 
-    monkeypatch.setattr("app.tools.calendar_tools.get_provider_with_name", fake_get_provider)
+    monkeypatch.setattr("app.tools.calendar_tools.get_calendar_provider_with_name", fake_get_provider)
 
     result = await read_calendar()
 
@@ -71,7 +71,7 @@ async def test_provider_401_maps_to_auth_required(monkeypatch):
     async def fake_get_provider():
         raise AuthRequiredError()
 
-    monkeypatch.setattr("app.tools.calendar_tools.get_provider_with_name", fake_get_provider)
+    monkeypatch.setattr("app.tools.calendar_tools.get_calendar_provider_with_name", fake_get_provider)
 
     result = await read_calendar()
 
@@ -90,7 +90,7 @@ async def test_provider_403_maps_to_permission_denied(monkeypatch):
     async def fake_read_calendar(self):
         raise GraphApiError(403, "Insufficient permission")
 
-    monkeypatch.setattr("app.tools.calendar_tools.get_provider_with_name", fake_get_provider)
+    monkeypatch.setattr("app.tools.calendar_tools.get_calendar_provider_with_name", fake_get_provider)
     monkeypatch.setattr(MockProvider, "read_calendar", fake_read_calendar)
 
     result = await read_calendar()
