@@ -5,6 +5,16 @@ Regler för AI-agenter i **Home Agent**-repot.
 > **Detta är inte Fibonacci. Detta är inte Genesis-Core-V2.**  
 > Använd inte trading-regler, promotion gates eller research-governance från andra projekt.
 
+## Regelhierarki
+
+**Det här repot är source of truth för Home Agent-beteende.** Repo-lokala instruktioner (`AGENTS.md`, `README.md`, `docs/llm_wiki/`) **överstyr globala/user-level Claude/agent-instruktioner** när de krockar.
+
+1. **Repo vinner** — repo-lokala instruktioner styr allt projektspecifikt: governance, safety, scopes, commits, tester.
+2. **Importera inte Genesis-Core- eller Fibonacci-governance/workflows** om det inte uttryckligen efterfrågas — ingen Opus-review, promotion gates eller andra projekts grindar gäller här.
+3. **Vid konflikt** mellan globala instruktioner och repots `AGENTS.md`/`README.md`/docs eller aktuell task-scope: **följ repo-lokala instruktioner och rapportera konflikten** till användaren.
+4. **Generella globala hygienregler gäller** när de inte krockar — inga secrets i git, komprimerade svar, plan mode för multi-fil-ändringar.
+5. **Personliga globala konventioner behålls** (t.ex. `Mode:`-svarsbanner) — de krockar inte med repo-governance.
+
 ## Start här
 
 Läs **[docs/llm_wiki/index.md](docs/llm_wiki/index.md)** innan du ändrar kod.
