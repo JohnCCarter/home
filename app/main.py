@@ -10,12 +10,7 @@ from app.mcp.schemas import (
     MCP_STREAMABLE_HTTP_PATH,
     READ_ONLY_TOOL_NAMES,
 )
-from app.runtime_metadata import (
-    EXPECTED_TEST_COUNT,
-    resolve_version,
-    safety_display_label,
-    safety_summary,
-)
+from app.runtime_metadata import resolve_version, safety_display_label, safety_summary
 from app.tools import http_status_for_error, read_calendar, read_email, read_recent_emails
 from app.tools.contracts import ToolResult
 from app.web_ui import BASE_STYLES, NARROW_MAIN_STYLES
@@ -165,7 +160,6 @@ async def get_status() -> HTMLResponse:
       <dt>Tools</dt><dd><ul>{tool_items}</ul></dd>
       <dt>Safety</dt><dd><ul>{safety_items}</ul></dd>
       <dt>Git commit / version</dt><dd><code>{version}</code></dd>
-      <dt>Expected test count</dt><dd>{EXPECTED_TEST_COUNT}</dd>
     </dl>
     <p class="note">Local runtime metadata only — does not check whether the MCP server, tunnel client, or Microsoft Graph are reachable.</p>
     <p class="nav"><a href="/health">/health</a> · <a href="/calendar">Calendar</a> · <a href="/mail">Mail</a></p>

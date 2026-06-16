@@ -66,6 +66,8 @@ Status under körning:
 | `http://127.0.0.1:8000/status` | HTML-statussida (endpoints + tools) |
 | `http://127.0.0.1:8080/ui` | tunnel-client admin UI |
 
+`/status` and `/health` expose safe local runtime metadata only. They do not probe Microsoft Graph, mailbox/calendar data, MCP liveness, tunnel-client liveness, or external services. Version is best-effort: `HOME_AGENT_VERSION` → `GIT_COMMIT` → `git rev-parse --short HEAD` → `unknown`.
+
 ### FastAPI (REST + OAuth)
 
 ```bash

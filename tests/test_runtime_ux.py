@@ -112,12 +112,6 @@ def test_status_includes_version_field():
     assert "Git commit / version" in client.get("/status").text
 
 
-def test_status_includes_expected_test_count():
-    from app.runtime_metadata import EXPECTED_TEST_COUNT
-
-    assert str(EXPECTED_TEST_COUNT) in client.get("/status").text
-
-
 def test_status_has_no_tunnel_ids():
     import re
 

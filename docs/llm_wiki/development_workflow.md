@@ -59,7 +59,16 @@ Tre terminaler — ett script var:
 
 Tunnel-profil (en per dator) styrs av `-Profile` (default `home-agent`): jobbdatorn kör `.\scripts\start_tunnel_client.ps1 -Profile home-agent-work` (eller `$env:TUNNEL_PROFILE="home-agent-work"`). Samma repo/`.env`/nyckel/Azure-config på båda — endast tunnel-profil/tunnel-ID skiljer.
 
-Liveness/status: `http://127.0.0.1:8000/health` (JSON), `http://127.0.0.1:8000/status` (HTML). Ingen av dem läser mail/kalender eller exponerar tokens/secrets. Scripten skapar aldrig `.env` och committar inget.
+Liveness/status: `http://127.0.0.1:8000/health` (JSON), `http://127.0.0.1:8000/status` (HTML). Scripten skapar aldrig `.env` och committar inget.
+
+`/status` and `/health` expose safe local runtime metadata only. They do not probe Microsoft Graph, mailbox/calendar data, MCP liveness, tunnel-client liveness, or external services. Version is best-effort: `HOME_AGENT_VERSION` → `GIT_COMMIT` → `git rev-parse --short HEAD` → `unknown`.
+
+Vill du sanity-checka en färsk clone, jämför resultatet mot senaste [handoff.md](handoff.md):
+
+```powershell
+$env:PYTHONDONTWRITEBYTECODE = "1"
+uv run --no-sync pytest -q
+```
 
 ## Commits och PR
 

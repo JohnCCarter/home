@@ -13,10 +13,6 @@ import subprocess
 
 from app.safety.policy import ActionClass, decision_for_class
 
-# Manual reference shown on /status so the user can sanity-check a fresh checkout
-# ("if pytest doesn't report this, something drifted"). Bump when the suite changes.
-EXPECTED_TEST_COUNT = 129
-
 # Human-readable labels for the policy states surfaced by safety_summary().
 _SAFETY_DISPLAY = {
     "allowed": "allowed",

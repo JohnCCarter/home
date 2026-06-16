@@ -75,6 +75,15 @@ pending confirmation between calls).
 - **No Microsoft Graph write scopes were added.**
 - **Providers still do not implement write behavior** (`base.py` write methods raise `NotImplementedError`).
 
+## Runtime status (`/status`, `/health`)
+
+`/status` and `/health` expose safe local runtime metadata only. They do not probe
+Microsoft Graph, mailbox/calendar data, MCP liveness, tunnel-client liveness, or
+external services. Both surface mode, tools, and a policy-derived safety summary;
+`version` is best-effort: `HOME_AGENT_VERSION` → `GIT_COMMIT` →
+`git rev-parse --short HEAD` → `unknown`. (Test count lives here in the handoff, not
+in the runtime endpoint — sanity-check a fresh clone with `uv run --no-sync pytest -q`.)
+
 ---
 
 ## Fortsätt hemma — resume från ren clone/pull
