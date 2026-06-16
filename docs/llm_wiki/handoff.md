@@ -1,6 +1,6 @@
 # Handoff
 
-Senast uppdaterad: 2026-06-16 (safety-grind + runtime status-polish, pushat på effe798)
+Senast uppdaterad: 2026-06-16 (Google calendar-provider-vägen klar, pushat på ab53e31)
 
 ## Aktuell status (runtime)
 
@@ -14,7 +14,7 @@ Senast uppdaterad: 2026-06-16 (safety-grind + runtime status-polish, pushat på 
 **Verifierat på utvecklingsmaskin:**
 
 - `uv lock --check` — OK
-- `uv run pytest -q` — 102 passed
+- `uv run pytest -q` — 165 passed
 - `tunnel-client doctor` — API key OK, tunnel ID OK, MCP connection OK
 - `tunnel-client run` — `ready`
 - OAuth metadata-varning i doctor är **förväntad** — ChatGPT-connector använder **No auth**
@@ -94,7 +94,7 @@ uv sync --group dev
 uv run pytest -q
 ```
 
-Förväntat: **102 passed** (siffran växer med nya tester — kontrollera mot senaste commit).
+Förväntat: **165 passed** (siffran växer med nya tester — kontrollera mot senaste commit).
 
 ### Lokal miljö hemma (ej i git)
 
@@ -284,35 +284,49 @@ Att klistra in `<din nyckel>` ordagrant → `401 Unauthorized` i control-plane-p
 ### Ofarliga varningar
 `doctor` rödmarkerar `oauth_metadata` (404 på `/.well-known/oauth-protected-resource`) och `run` loggar "OAuth discovery failed: invalid character 'N'". Det är **förväntat** för en No-auth-server och blockerar ingenting.
 
+## Google calendar-vägen (klar, 2026-06-16)
+
+The Google calendar provider path is now complete end-to-end:
+
+- **Google OAuth route implemented** — `/auth/google` login + callback (parallel prefix,
+  PKCE + CSRF state, scopes `openid email https://www.googleapis.com/auth/calendar.events.readonly`).
+- **Google token-store namespace implemented** — Google tokens in `token_store_google.json`,
+  isolated from Microsoft's `token_store.json` (local-only, never committed).
+- **`GoogleProvider.read_calendar` implemented** — calendar-only, maps Google events
+  (timed `dateTime` + all-day `date`) to `CalendarEvent`; `GoogleApiError(ProviderApiError)`.
+- **Explicit calendar provider selection implemented** via `HOME_AGENT_CALENDAR_PROVIDER=google`
+  (`get_calendar_provider_with_name()` in [`app/tools/deps.py`](deps.py)).
+- **Microsoft remains default** — flag unset/`microsoft` ⇒ behavior byte-identical to before.
+- **Google never reaches the mail path** — separate calendar selector; `get_provider_with_name()`
+  (mail) unchanged and can never return `GoogleProvider`.
+- **No write/delete tools.**
+- **No new MCP signatures.**
+
+`GOOGLE_*` config is optional and fully independent of the Microsoft (`AZURE_*`) flow.
+
 ## Nästa steg (ej påbörjade)
 
-1. Google provider
+1. **Google refresh flow** (next slice) — make the already-selected Google calendar path usable
+   beyond ~1h:
+   - Implement `get_valid_google_tokens()` parallel to Microsoft `get_valid_tokens()`.
+   - Use the Google token endpoint + `GOOGLE_CLIENT_SECRET`. **No new scopes. No new tools. No MCP changes.**
+   - Replace the direct `load_tokens("google")` in calendar provider selection
+     ([`deps.py`](deps.py)) with refresh-aware Google token loading.
+   - Prove the refresh in isolation before wiring it into selection (same pattern as prior slices).
 2. Wake-word-sidecar
 3. Framtida write-tool-design — bakom safety-grinden + explicit `confirm`
 
 `app/safety/`-grunden och status-polish (version + safety-summary, inget drift-känsligt
 testantal i runtime) är **klara** och pushade.
 
-**Google-förberedelser (klara):** tools-lagret är providerneutralt
-(`ProviderApiError`-bas, `GraphApiError` ärver). Token store is namespaced by provider —
-Microsoft/default continues to use `token_store.json`, Google auth uses
-`token_store_google.json`; token files remain local-only and must never be committed.
-
-**Google OAuth-route (klar, 2026-06-16):** `/auth/google` login + callback is implemented
-(parallel prefix, PKCE + CSRF state, exact scopes
-`openid email https://www.googleapis.com/auth/calendar.events.readonly`). It stores Google
-tokens in `token_store_google.json`. `GOOGLE_*` config is optional and fully independent of
-the Microsoft (`AZURE_*`) flow. **No `GoogleProvider` exists yet. No `deps.py` provider
-selection exists yet. No MCP/tool signatures changed. No write/delete tools.** Next: `GoogleProvider.read_calendar()` (preflight §13 step 5).
-
 ## Senaste verifiering
 
 ```text
 Kommando: uv lock --check && PYTHONDONTWRITEBYTECODE=1 uv run --no-sync pytest -q
-Resultat: lock OK, 128 passed
+Resultat: lock OK, 165 passed
 Graph: read-only via tools + MCP (stdio + HTTP)
 Tunnel: per-maskin (home-agent / home-agent-work), MCP :8001 stateless
 Datum: 2026-06-16
-HEAD: effe798 (origin/main == HEAD)
-Batch: 50f6275 status-metadata · 9ee8530 codeql-fix · 9285a17 AGENTS-konstitution+CLAUDE.md · effe798 drop runtime test count
+HEAD: ab53e31 (origin/main == HEAD), working tree clean
+Batch: 362970e google-scope-doc · 83271d3 google-oauth-login · 0f3ef5e google-calendar-provider · ab53e31 explicit google calendar selection
 ```
