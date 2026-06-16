@@ -3,8 +3,31 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-TOKEN_STORE_PATH = Path("token_store.json")
+DEFAULT_PROVIDER = "microsoft"
 EXPIRY_BUFFER_SECONDS = 60
+
+# Token storage is namespaced by provider so a future Google login can never
+# overwrite the Microsoft token (separate local files). Paths are relative on
+# purpose — they resolve against the current working directory, which keeps the
+# chdir-based test isolation working.
+_PROVIDER_TOKEN_FILES: Dict[str, str] = {
+    "microsoft": "token_store.json",
+    "google": "token_store_google.json",
+}
+
+
+def token_store_path(provider: str = DEFAULT_PROVIDER) -> Path:
+    """Return the token file for a provider. Unknown provider fails closed."""
+    try:
+        filename = _PROVIDER_TOKEN_FILES[provider]
+    except KeyError:
+        known = ", ".join(sorted(_PROVIDER_TOKEN_FILES))
+        raise ValueError(f"Unknown token provider {provider!r}; expected one of: {known}")
+    return Path(filename)
+
+
+# Backward-compatible constant: the Microsoft/default token file path.
+TOKEN_STORE_PATH = token_store_path()
 
 
 def _normalize_tokens(tokens: Dict[str, Any]) -> Dict[str, Any]:
@@ -16,27 +39,29 @@ def _normalize_tokens(tokens: Dict[str, Any]) -> Dict[str, Any]:
     return normalized
 
 
-def save_tokens(tokens: Dict[str, Any]) -> None:
-    TOKEN_STORE_PATH.write_text(json.dumps(_normalize_tokens(tokens), indent=2), encoding="utf-8")
+def save_tokens(tokens: Dict[str, Any], provider: str = DEFAULT_PROVIDER) -> None:
+    path = token_store_path(provider)
+    path.write_text(json.dumps(_normalize_tokens(tokens), indent=2), encoding="utf-8")
     try:
-        TOKEN_STORE_PATH.chmod(0o600)
+        path.chmod(0o600)
     except OSError:
         pass
 
 
-def load_stored_tokens() -> Optional[Dict[str, Any]]:
+def load_stored_tokens(provider: str = DEFAULT_PROVIDER) -> Optional[Dict[str, Any]]:
     """Load tokens from disk without checking expiry (for refresh flow)."""
-    if not TOKEN_STORE_PATH.exists():
+    path = token_store_path(provider)
+    if not path.exists():
         return None
 
     try:
-        return json.loads(TOKEN_STORE_PATH.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, ValueError):
         return None
 
 
-def load_tokens() -> Optional[Dict[str, Any]]:
-    data = load_stored_tokens()
+def load_tokens(provider: str = DEFAULT_PROVIDER) -> Optional[Dict[str, Any]]:
+    data = load_stored_tokens(provider)
     if not data:
         return None
 
@@ -45,13 +70,14 @@ def load_tokens() -> Optional[Dict[str, Any]]:
     return data
 
 
-def clear_tokens() -> None:
-    if TOKEN_STORE_PATH.exists():
-        TOKEN_STORE_PATH.unlink()
+def clear_tokens(provider: str = DEFAULT_PROVIDER) -> None:
+    path = token_store_path(provider)
+    if path.exists():
+        path.unlink()
 
 
-def has_stored_tokens() -> bool:
-    return TOKEN_STORE_PATH.exists()
+def has_stored_tokens(provider: str = DEFAULT_PROVIDER) -> bool:
+    return token_store_path(provider).exists()
 
 
 def is_token_expired(tokens: Dict[str, Any]) -> bool:

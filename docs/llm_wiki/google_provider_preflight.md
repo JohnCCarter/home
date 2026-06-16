@@ -35,13 +35,16 @@ Minsta åtgärd (del av Google-slicen, inte nu):
   ärver; tools mappar bas-typen. Inga tool-signaturer ändras.
 - alternativ (fult): låt `GoogleProvider` kasta `GraphApiError` — fungerar men missvisande namn.
 
-## 4. Token-store per provider? — Ja, namespace krävs
+## 4. Token-store per provider? — Ja (**implementerat 2026-06-16**)
 
-[`token_store.py`](token_store.py) använder **en** fil `token_store.json` med generisk dict
-(`access_token`, `refresh_token`, `expires_at`, `scope`). Den är i praktiken Microsoft-only
-(fylls av [`microsoft.py`](auth_and_secrets.md)). **Risk:** en Google-token skulle skriva över
-Microsoft-token i samma fil. Åtgärd: namespacea — separata filer
-(`token_store.json` + `token_store_google.json`) speglar nuvarande path-baserade design enklast.
+Token store is namespaced by provider. Microsoft/default continues to use
+`token_store.json`. Future Google auth will use `token_store_google.json`. Token files
+remain local-only and must never be committed.
+
+`token_store.py` har nu `token_store_path(provider)` + `provider`-argument (default
+`microsoft`) på `save_tokens`/`load_tokens`/`load_stored_tokens`/`clear_tokens`/
+`has_stored_tokens`. Okänd provider → `ValueError` (fail closed). Microsoft-pathen är
+exakt som före refaktorn; isolering verifierad av `tests/test_token_store_namespace.py`.
 
 ## 5. `.env`-utökning senare? — Ja, senare
 
@@ -112,8 +115,8 @@ Google read-tools är samma READ-actions → grinden oförändrad. read allowed 
 
 **Google Calendar read-only, modell A**, i denna ordning:
 
-1. `ProviderApiError`-bas + låt `GraphApiError` ärva; peka tools-mappningen på basen (ren refaktor, beteende oförändrat, befintliga tester gröna).
-2. Token-store-namespace (Google-fil separat).
+1. ~~`ProviderApiError`-bas + låt `GraphApiError` ärva~~ — **klart** (38d513f).
+2. ~~Token-store-namespace (Google-fil separat)~~ — **klart** (2026-06-16).
 3. `/auth/google`-router (parallell prefix) + verifierade read-only scopes — **efter** scope-verifiering.
 4. `GoogleProvider.read_calendar()` via `httpx`.
 5. `deps.py`: välj Google när Google-token finns (default/precedens definierad).

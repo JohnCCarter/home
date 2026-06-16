@@ -293,6 +293,12 @@ Att klistra in `<din nyckel>` ordagrant → `401 Unauthorized` i control-plane-p
 `app/safety/`-grunden och status-polish (version + safety-summary, inget drift-känsligt
 testantal i runtime) är **klara** och pushade.
 
+**Google-förberedelser (klara, ingen OAuth/scopes än):** tools-lagret är providerneutralt
+(`ProviderApiError`-bas, `GraphApiError` ärver). Token store is namespaced by provider —
+Microsoft/default continues to use `token_store.json`, future Google auth will use
+`token_store_google.json`; token files remain local-only and must never be committed.
+Återstår före Google: `/auth/google`-route + **scope-verifiering mot officiell Google-doc**.
+
 ## Senaste verifiering
 
 ```text
