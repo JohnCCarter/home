@@ -137,8 +137,13 @@ Google read-tools är samma READ-actions → grinden oförändrad. read allowed 
 2. ~~Token-store-namespace (Google-fil separat)~~ — **klart** (2026-06-16).
 3. ~~scope-verifiering~~ — **klart** (2026-06-16, §6 VERIFIED).
 4. ~~`/auth/google` login + callback (parallell prefix, PKCE/state)~~ — **klart** (2026-06-16). Sparar Google-tokens i `token_store_google.json`; scopes `openid email https://www.googleapis.com/auth/calendar.events.readonly`. Ingen `GoogleProvider`, inget `deps.py`-val, inga MCP/tool-ändringar, inga write/delete-tools än.
-5. `GoogleProvider.read_calendar()` via `httpx`.
-6. `deps.py`: välj Google när Google-token finns (default/precedens definierad).
-7. Tester per §11.
+5. ~~`GoogleProvider.read_calendar()` via `httpx`~~ — **klart** (2026-06-16, calendar-only, `GoogleApiError`).
+6. ~~`deps.py`: välj Google explicit via `HOME_AGENT_CALENDAR_PROVIDER=google`~~ — **klart** (2026-06-16). Microsoft default oförändrad; Google når aldrig mail-vägen.
+7. ~~Tester per §11~~ — **klart** (löpande).
+
+**Google refresh flow implemented** (2026-06-16): Google calendar provider selection now uses
+refresh-aware token loading (`get_valid_google_tokens()`). An expired access token with a
+`refresh_token` is refreshed against the Google token endpoint and re-saved to
+`token_store_google.json`; fails closed otherwise. No new scopes, no Gmail, no write/delete tools.
 
 Gmail-read och dual-provider-aggregering = separata senare slices.

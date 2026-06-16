@@ -3,6 +3,7 @@
 Token exchange is monkeypatched (no network). All token values are obvious fakes.
 """
 
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -136,3 +137,81 @@ def test_callback_tokens_never_in_response_or_logs(monkeypatch, caplog):
     all_logs = "\n".join(record.getMessage() for record in caplog.records)
     assert "super-secret-google" not in all_logs
     assert "super-secret-refresh" not in all_logs
+
+
+# --- refresh flow (get_valid_google_tokens) ----------------------------------
+
+
+def _save_google_token(*, access: str, refresh: str | None = None, expired: bool = False) -> None:
+    delta = timedelta(hours=-1) if expired else timedelta(hours=1)
+    data = {"access_token": access, "expires_at": (datetime.now(timezone.utc) + delta).isoformat()}
+    if refresh is not None:
+        data["refresh_token"] = refresh
+    token_store.save_tokens(data, provider="google")
+
+
+@pytest.mark.asyncio
+async def test_get_valid_google_tokens_valid_returns_without_refresh(monkeypatch):
+    _save_google_token(access="still-valid", refresh="r", expired=False)
+
+    async def must_not_refresh(refresh_token: str):
+        raise AssertionError("refresh must not be called for a valid token")
+
+    monkeypatch.setattr(google, "refresh_google_access_token", must_not_refresh)
+
+    tokens = await google.get_valid_google_tokens()
+    assert tokens["access_token"] == "still-valid"
+
+
+@pytest.mark.asyncio
+async def test_get_valid_google_tokens_refreshes_when_expired(monkeypatch):
+    _save_google_token(access="old-access", refresh="refresh-1", expired=True)
+
+    async def fake_refresh(refresh_token: str):
+        assert refresh_token == "refresh-1"
+        return {"access_token": "new-access", "expires_in": 3600}
+
+    monkeypatch.setattr(google, "refresh_google_access_token", fake_refresh)
+
+    tokens = await google.get_valid_google_tokens()
+    assert tokens["access_token"] == "new-access"
+    # Persisted under the google namespace.
+    assert token_store.load_stored_tokens("google")["access_token"] == "new-access"
+
+
+@pytest.mark.asyncio
+async def test_get_valid_google_tokens_preserves_refresh_token(monkeypatch):
+    _save_google_token(access="old-access", refresh="keep-me", expired=True)
+
+    async def fake_refresh(refresh_token: str):
+        # Google often omits refresh_token on refresh.
+        return {"access_token": "new-access", "expires_in": 3600}
+
+    monkeypatch.setattr(google, "refresh_google_access_token", fake_refresh)
+
+    tokens = await google.get_valid_google_tokens()
+    assert tokens["refresh_token"] == "keep-me"
+    assert token_store.load_stored_tokens("google")["refresh_token"] == "keep-me"
+
+
+@pytest.mark.asyncio
+async def test_get_valid_google_tokens_refresh_failure_returns_none(monkeypatch):
+    _save_google_token(access="old-access", refresh="refresh-1", expired=True)
+
+    async def failing_refresh(refresh_token: str):
+        raise google.TokenRefreshError("refresh rejected")
+
+    monkeypatch.setattr(google, "refresh_google_access_token", failing_refresh)
+
+    assert await google.get_valid_google_tokens() is None
+
+
+@pytest.mark.asyncio
+async def test_get_valid_google_tokens_missing_config_fails_closed(monkeypatch):
+    # Expired token needs a refresh, but Google config is absent → fail closed (None),
+    # never a 500 into the tools path.
+    for var in ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI"):
+        monkeypatch.delenv(var, raising=False)
+    _save_google_token(access="old-access", refresh="refresh-1", expired=True)
+
+    assert await google.get_valid_google_tokens() is None

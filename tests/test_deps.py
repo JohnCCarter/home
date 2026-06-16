@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from app.auth import google as google_auth
 from app.auth import token_store
 from app.providers.google_provider import GoogleProvider
 from app.providers.mock_provider import MockProvider
@@ -94,6 +95,53 @@ async def test_flag_google_expired_token_raises_auth_required(monkeypatch):
     monkeypatch.setenv("HOME_AGENT_CALENDAR_PROVIDER", "google")
     _save_token("google", expired=True)
     _save_token("microsoft")  # present, but explicit google choice must not fall back
+
+    with pytest.raises(AuthRequiredError) as exc:
+        await get_calendar_provider_with_name()
+
+    assert "/auth/google/login" in exc.value.message
+
+
+# --- explicit google selection is refresh-aware ------------------------------
+
+
+def _save_expired_google_with_refresh() -> None:
+    token_store.save_tokens(
+        {
+            "access_token": "old-google-access",
+            "refresh_token": "google-refresh",
+            "expires_at": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(),
+        },
+        provider="google",
+    )
+
+
+@pytest.mark.asyncio
+async def test_flag_google_expired_token_refreshes_and_selects_google(monkeypatch):
+    monkeypatch.setenv("HOME_AGENT_CALENDAR_PROVIDER", "google")
+    _save_expired_google_with_refresh()
+
+    async def fake_refresh(refresh_token: str):
+        assert refresh_token == "google-refresh"
+        return {"access_token": "refreshed-google-access", "expires_in": 3600}
+
+    monkeypatch.setattr(google_auth, "refresh_google_access_token", fake_refresh)
+
+    provider, name = await get_calendar_provider_with_name()
+
+    assert isinstance(provider, GoogleProvider)
+    assert name == "google"
+
+
+@pytest.mark.asyncio
+async def test_flag_google_refresh_failure_raises_auth_required(monkeypatch):
+    monkeypatch.setenv("HOME_AGENT_CALENDAR_PROVIDER", "google")
+    _save_expired_google_with_refresh()
+
+    async def failing_refresh(refresh_token: str):
+        raise google_auth.TokenRefreshError("refresh rejected")
+
+    monkeypatch.setattr(google_auth, "refresh_google_access_token", failing_refresh)
 
     with pytest.raises(AuthRequiredError) as exc:
         await get_calendar_provider_with_name()

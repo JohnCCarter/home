@@ -14,7 +14,7 @@ Senast uppdaterad: 2026-06-16 (Google calendar-provider-vägen klar, pushat på 
 **Verifierat på utvecklingsmaskin:**
 
 - `uv lock --check` — OK
-- `uv run pytest -q` — 165 passed
+- `uv run pytest -q` — 172 passed
 - `tunnel-client doctor` — API key OK, tunnel ID OK, MCP connection OK
 - `tunnel-client run` — `ready`
 - OAuth metadata-varning i doctor är **förväntad** — ChatGPT-connector använder **No auth**
@@ -94,7 +94,7 @@ uv sync --group dev
 uv run pytest -q
 ```
 
-Förväntat: **165 passed** (siffran växer med nya tester — kontrollera mot senaste commit).
+Förväntat: **172 passed** (siffran växer med nya tester — kontrollera mot senaste commit).
 
 ### Lokal miljö hemma (ej i git)
 
@@ -296,6 +296,11 @@ The Google calendar provider path is now complete end-to-end:
   (timed `dateTime` + all-day `date`) to `CalendarEvent`; `GoogleApiError(ProviderApiError)`.
 - **Explicit calendar provider selection implemented** via `HOME_AGENT_CALENDAR_PROVIDER=google`
   (`get_calendar_provider_with_name()` in [`app/tools/deps.py`](deps.py)).
+- **Google refresh flow implemented** — calendar provider selection now uses refresh-aware
+  token loading (`get_valid_google_tokens()` in [`app/auth/google.py`](google.py)): an expired
+  access token with a `refresh_token` is refreshed against the Google token endpoint and the new
+  token is saved to `token_store_google.json`. Fails closed (→ `/auth/google/login`) on missing/
+  unrefreshable tokens or missing Google config. No new scopes, no Gmail, no write/delete tools.
 - **Microsoft remains default** — flag unset/`microsoft` ⇒ behavior byte-identical to before.
 - **Google never reaches the mail path** — separate calendar selector; `get_provider_with_name()`
   (mail) unchanged and can never return `GoogleProvider`.
@@ -306,15 +311,11 @@ The Google calendar provider path is now complete end-to-end:
 
 ## Nästa steg (ej påbörjade)
 
-1. **Google refresh flow** (next slice) — make the already-selected Google calendar path usable
-   beyond ~1h:
-   - Implement `get_valid_google_tokens()` parallel to Microsoft `get_valid_tokens()`.
-   - Use the Google token endpoint + `GOOGLE_CLIENT_SECRET`. **No new scopes. No new tools. No MCP changes.**
-   - Replace the direct `load_tokens("google")` in calendar provider selection
-     ([`deps.py`](deps.py)) with refresh-aware Google token loading.
-   - Prove the refresh in isolation before wiring it into selection (same pattern as prior slices).
-2. Wake-word-sidecar
-3. Framtida write-tool-design — bakom safety-grinden + explicit `confirm`
+1. `GoogleProvider.read_recent_emails`/`read_email` (Gmail read) — separate later slice; needs
+   MIME/base64url body decoding and is privacy-sensitive (calendar-first was deliberate).
+2. Dual-provider calendar aggregation (both Microsoft + Google at once) — larger design, deferred.
+3. Wake-word-sidecar
+4. Framtida write-tool-design — bakom safety-grinden + explicit `confirm`
 
 `app/safety/`-grunden och status-polish (version + safety-summary, inget drift-känsligt
 testantal i runtime) är **klara** och pushade.
@@ -323,10 +324,10 @@ testantal i runtime) är **klara** och pushade.
 
 ```text
 Kommando: uv lock --check && PYTHONDONTWRITEBYTECODE=1 uv run --no-sync pytest -q
-Resultat: lock OK, 165 passed
+Resultat: lock OK, 172 passed
 Graph: read-only via tools + MCP (stdio + HTTP)
 Tunnel: per-maskin (home-agent / home-agent-work), MCP :8001 stateless
 Datum: 2026-06-16
-HEAD: ab53e31 (origin/main == HEAD), working tree clean
-Batch: 362970e google-scope-doc · 83271d3 google-oauth-login · 0f3ef5e google-calendar-provider · ab53e31 explicit google calendar selection
+HEAD: feat(auth) refresh Google OAuth tokens (origin/main == HEAD), working tree clean
+Batch: 0f3ef5e google-calendar-provider · ab53e31 explicit google calendar selection · 27f1a0a handoff · <this commit> google refresh flow
 ```

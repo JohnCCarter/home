@@ -46,6 +46,12 @@ class TokenExchangeError(Exception):
         self.message = message
 
 
+class TokenRefreshError(Exception):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
+
+
 def _callback_page(success: bool, title: str, message: str, status_code: int = 200) -> HTMLResponse:
     extra = (
         '<p class="nav"><a href="/calendar">/calendar</a> · <a href="/mail">/mail</a></p>'
@@ -129,6 +135,71 @@ async def _exchange_code_for_tokens(code: str, code_verifier: str) -> Dict[str, 
         token_data["expires_at"] = expires_at.isoformat()
 
     return token_data
+
+
+def _merge_refreshed_tokens(existing: Dict[str, Any], updated: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge a refresh response over the stored tokens. Google often omits
+    refresh_token (and scope) on refresh, so preserve the existing ones."""
+    merged = {**existing, **updated}
+    if "refresh_token" not in updated and existing.get("refresh_token"):
+        merged["refresh_token"] = existing["refresh_token"]
+    if "scope" not in updated and existing.get("scope"):
+        merged["scope"] = existing["scope"]
+    if "expires_in" in updated and "expires_at" not in updated:
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=int(updated["expires_in"]))
+        merged["expires_at"] = expires_at.isoformat()
+    return merged
+
+
+async def refresh_google_access_token(refresh_token: str) -> Dict[str, Any]:
+    settings = get_google_settings()
+    payload = {
+        "grant_type": "refresh_token",
+        "client_id": settings.google_client_id,
+        "client_secret": settings.google_client_secret,
+        "refresh_token": refresh_token,
+    }
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.post(GOOGLE_TOKEN_ENDPOINT, data=payload)
+        if response.is_error:
+            logger.error("Google token refresh failed: status=%s", response.status_code)
+            raise TokenRefreshError("Google token refresh failed. Please sign in again.")
+        token_data = response.json()
+
+    if "expires_in" in token_data and "expires_at" not in token_data:
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=int(token_data["expires_in"]))
+        token_data["expires_at"] = expires_at.isoformat()
+
+    return token_data
+
+
+async def get_valid_google_tokens() -> Optional[Dict[str, Any]]:
+    """Return non-expired Google tokens, refreshing transparently when needed.
+
+    Fails closed (returns None) on missing/expired-unrefreshable tokens, refresh
+    failure, or missing Google config — never raises into the tools path."""
+    stored = token_store.load_stored_tokens(PROVIDER)
+    if not stored:
+        return None
+
+    if not token_store.is_token_expired(stored):
+        return stored
+
+    refresh_token = stored.get("refresh_token")
+    if not refresh_token:
+        return None
+
+    try:
+        refreshed = await refresh_google_access_token(refresh_token)
+    except (TokenRefreshError, RuntimeError):
+        # RuntimeError = Google config missing (get_google_settings) → fail closed.
+        return None
+
+    merged = _merge_refreshed_tokens(stored, refreshed)
+    token_store.save_tokens(merged, provider=PROVIDER)
+    logger.info("Google access token refreshed")
+    return merged
 
 
 def _purge_expired_states() -> None:

@@ -1,8 +1,9 @@
 import os
 from typing import Tuple, Union
 
+from app.auth.google import get_valid_google_tokens
 from app.auth.microsoft import get_valid_tokens
-from app.auth.token_store import has_stored_tokens, load_tokens
+from app.auth.token_store import has_stored_tokens
 from app.providers.google_provider import GoogleProvider
 from app.providers.mock_provider import MockProvider
 from app.providers.outlook_provider import OutlookProvider
@@ -50,9 +51,10 @@ async def get_calendar_provider_with_name() -> Tuple[CalendarSelectable, str]:
     choice = os.getenv(CALENDAR_PROVIDER_ENV, "microsoft").strip().lower()
 
     if choice == "google":
-        # No Google refresh flow yet: load_tokens fails closed on expiry, so a stale
-        # Google token surfaces as AuthRequiredError rather than a broken provider.
-        tokens = load_tokens("google")
+        # Refresh-aware: get_valid_google_tokens refreshes an expired access token
+        # when a refresh_token exists, and fails closed (None) otherwise — so a stale
+        # or unrefreshable token surfaces as AuthRequiredError, not a broken provider.
+        tokens = await get_valid_google_tokens()
         access_token = tokens.get("access_token") if tokens else None
         if access_token:
             return GoogleProvider(access_token=access_token), "google"
